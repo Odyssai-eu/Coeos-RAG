@@ -46,6 +46,14 @@ brûlées, fragilité des stores exposée).
   cerveau**. Les corpus n'ont pas besoin de graphe d'entités ; la mémoire si
   (« te souviens-tu de moi » = recall d'entités, pas similarité brute).
 
+### Décision A (2026-06-12 soir, Sophie) — la veille alimente les CORPUS
+
+« On ne mélange pas : LightRAG pour la memory, Qdrant pour les corpus. »
+La veille média (#3) et tout flux documentaire écrivent dans des collections
+Qdrant `.44` via le registre de corpus (#7) — **jamais** dans les tiers
+mémoire. Pas d'exception, pas de flag « digest vers memory » : la mémoire
+ne s'écrit que par le compile des conversations (Karpathy).
+
 ### Le drain du 2026-06-12 (fait accompli)
 
 Le tier company (`:8766`) a été vidé de son corpus : recouvrement vérifié
@@ -67,7 +75,7 @@ le wiki user : décisions, gens, projets).
 | Qdrant | `.44:6333` | **les corpus** : `alpha_centauri`, `obsidian-context`, `companion-memory`, `nemo` | Qdrant REST |
 | bge-m3 | `.44:8082` | embeddings corpus | OpenAI-compat |
 | crawler | `.46` | alimentation corpus (GitHub, docs, veille) | — |
-| Sentinel LightRAG `:9621` | `.39` | corpus légal de Sentinel (produit séparé, design assumé) | LightRAG |
+| Sentinel | `.23` | **projet autonome** — son LightRAG dédié vit sur `.23` ; retiré de `.39` le 2026-06-12 après-midi. Hors scope OdyssAI-RAG (epic #1). | — |
 
 Extraction LLM des tiers mémoire : `tele-fast:qwen3-coder-30b-a3b-instruct-6bit`
 via le proxy OdyssAI-X `:8000` — **toujours l'id qualifié** `cluster:model`
@@ -117,11 +125,22 @@ configurées d'un corpus, pas des scripts orphelins.
   LightRAG = **durcissement différé** (les tiers sont redevenus petits), pas
   un préalable.
 
-## v1 — le dashboard (issues #1-#6)
+## v1 — le découpage (epic #1, structure de Sophie)
 
-Pattern de la famille : FastAPI + dashboard single-file (comme OdyssAI-X
-`dashboard.html` et le bench odyssai-services). Container `odyssai-rag` sur
-`.39` (la donnée y vit), port `:8801`. Deux pages : **Memory** et **Corpus**.
+- **#2 Dashboard (13)** — fork `lightrag_webui` (HKUDS) + gateway FastAPI
+  fédérant les DEUX DB mémoire (user `.39:8767` + company `.39:8766`) :
+  parse, crawl, graphe, export Obsidian, choix LLM. Container `odyssai-rag`
+  sur `.39` (la donnée y vit).
+- **#3 Veille média (8)** — watchlist d'URLs, détection de changement,
+  ré-ingestion auto → **collections Qdrant via le registre (#7)**, décision A.
+  Pattern réutilisable par Sentinel (sur son infra `.23`).
+- **#5 Pipelines (5)** — scan/cancel, fenêtres calmes, garde anti-réveil de
+  backlog (cicatrices du 2026-06-12).
+- **#6 Réparations sûres (5)** — backup-avant-mutation, delete VÉRIFIÉ,
+  quarantaine/re-extract (idem).
+- **#7 Registre de corpus (3)** — collections Qdrant nommées + recettes +
+  scopes ; la destination de #3 et la source du « attach corpus » Companion.
 
-Hors scope v1 : gateway dans le data path, GraphRAG, migration storage,
-multi-instance Qdrant.
+Fondus dans l'epic : #4 → #2 (squelette), #8 → #3 (crawl), #9 → #2
+(graphe/export). Hors scope v1 : gateway dans le data path de chat, GraphRAG,
+migration storage, Sentinel.

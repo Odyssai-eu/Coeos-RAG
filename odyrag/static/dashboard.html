@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OdyRAG - Models</title>
+<style>
+:root {
+  --bg:#080810; --surface:#0e0e1a; --card:#12121f; --border:#1e1e33; --border2:#2a2a44;
+  --accent:#7c3aed; --accent2:#a855f7; --accent3:#c084fc; --text:#e2e2f0; --muted:#6b6b8a; --dim:#3a3a55;
+  --green:#10b981; --yellow:#f59e0b; --red:#ef4444; --blue:#3b82f6; --cyan:#06b6d4;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'SF Mono','Fira Code','Cascadia Code',monospace;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:13px; line-height:1.5; min-height:100vh; }
+header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px 12px; padding:8px 28px; min-height:56px;
+  background:linear-gradient(180deg,#0e0e1f 0%,var(--bg) 100%); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:10; }
+.logo { font-size:17px; font-weight:700; letter-spacing:-.3px; }
+.logo small { color:var(--muted); font-weight:500; font-size:12px; margin-left:10px; }
+.hdr-right { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; }
+main { max-width:1180px; margin:0 auto; padding:24px 28px 60px; }
+.banner { border:1px solid var(--border2); background:var(--surface); border-radius:8px; padding:10px 14px; margin-bottom:14px; }
+.banner.warn { border-color:#7a5a12; color:#f6d27a; } .banner.err { border-color:#7f2323; color:#f5a3a3; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(520px,100%),1fr)); gap:18px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+.card h2 { font-size:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.card h3 { font-size:11px; letter-spacing:.9px; text-transform:uppercase; color:var(--muted); margin:16px 0 8px; font-weight:600; }
+.chip { display:inline-block; padding:1px 8px; border-radius:99px; font-size:11px; font-weight:600; border:1px solid var(--border2); color:var(--muted); white-space:nowrap; }
+.card { min-width:0; overflow-wrap:anywhere; }
+table { display:block; overflow-x:auto; }
+.chip.ok { color:var(--green); border-color:#145c46; } .chip.bad { color:var(--red); border-color:#7f2323; }
+.chip.warn { color:var(--yellow); border-color:#7a5a12; } .chip.info { color:var(--cyan); border-color:#0e5666; }
+.mono { font-family:var(--mono); font-size:12px; }
+.muted { color:var(--muted); }
+.row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:6px 0; }
+.kv { display:grid; grid-template-columns:130px 1fr; gap:4px 12px; }
+.kv > div:nth-child(odd) { color:var(--muted); }
+select, input[type=text] { background:var(--surface); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:6px 9px; font:inherit; min-width:0; }
+input[type=text] { flex:1; min-width:150px; font-family:var(--mono); font-size:12px; }
+select { min-width:230px; font-family:var(--mono); font-size:12px; }
+button { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:6px 14px; font:inherit; font-weight:600; cursor:pointer; }
+button:hover:not(:disabled) { background:var(--accent2); }
+button:disabled { opacity:.4; cursor:not-allowed; }
+button.ghost { background:transparent; border:1px solid var(--border2); color:var(--text); }
+.dot { width:9px; height:9px; border-radius:50%; display:inline-block; background:var(--dim); }
+.dot.ok { background:var(--green); } .dot.bad { background:var(--red); } .dot.warn { background:var(--yellow); }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { text-align:left; color:var(--muted); font-weight:600; padding:4px 8px 4px 0; border-bottom:1px solid var(--border); }
+td { padding:5px 8px 5px 0; border-bottom:1px solid var(--border); vertical-align:top; }
+.note { color:var(--muted); font-size:12px; margin-top:6px; }
+label.chk { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
+.panel { margin-top:22px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+.panel h2 { font-size:13px; margin-bottom:8px; }
+.step { display:flex; gap:10px; padding:2px 0; font-family:var(--mono); font-size:12px; }
+.step .t { color:var(--dim); width:80px; flex-shrink:0; }
+.hidden { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">OdyRAG<small>Models</small></div>
+  <div class="hdr-right">
+    <span id="engine-chip" class="chip">engine</span>
+    <span id="updated">-</span>
+    <button class="ghost" data-action="token" title="Admin token (needed for any change)">Token</button>
+    <button class="ghost" data-action="refresh">Refresh</button>
+  </div>
+</header>
+<main>
+  <div id="banners"></div>
+  <div id="grid" class="grid"></div>
+  <div id="jobpanel" class="panel hidden"></div>
+  <div class="panel"><h2>Recent actions</h2><div id="audit" class="muted">-</div></div>
+</main>
+
+<script>
+let TOKEN = '';
+try { TOKEN = sessionStorage.getItem('odyrag_token') || ''; } catch (e) {}
+let state = null;
+let activeJob = null;
+let busyJob = false;
+
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+const short = d => d ? String(d).replace('T', ' ').slice(0, 16) : '...';
+
+async function api(path, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {});
+  if (opts.body) headers['Content-Type'] = 'application/json';
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const r = await fetch(path, Object.assign({}, opts, { headers }));
+  let body = null;
+  try { body = await r.json(); } catch (e) {}
+  if (!r.ok) {
+    const err = new Error((body && body.detail) || ('HTTP ' + r.status));
+    err.status = r.status;
+    throw err;
+  }
+  return body;
+}
+
+function ensureToken() {
+  if (TOKEN) return true;
+  const t = window.prompt('Admin token (stored for this browser tab only):');
+  if (!t) return false;
+  TOKEN = t.trim();
+  try { sessionStorage.setItem('odyrag_token', TOKEN); } catch (e) {}
+  return true;
+}
+
+// ── rendering ────────────────────────────────────────────────────────────────
+function chip(text, kind) { return `<span class="chip ${kind || ''}">${esc(text)}</span>`; }
+
+function llmOptions(c, engine) {
+  const ready = engine.ready_models || [];
+  const cur = c.llm.live || c.llm.configured;
+  const opts = ready.slice();
+  if (cur && !opts.includes(cur)) opts.unshift(cur);
+  return opts.map(m => {
+    const tag = ready.includes(m) ? '' : '  (not loaded)';
+    return `<option value="${esc(m)}" ${m === cur ? 'selected' : ''}>${esc(m + tag)}</option>`;
+  }).join('');
+}
+
+function instanceChips(c) {
+  const i = c.instance;
+  const out = [];
+  out.push(i.up ? chip('up', 'ok') : (i.loaded ? chip('not answering', 'bad') : chip('stopped', 'bad')));
+  if (i.busy === true) out.push(chip('busy: extracting', 'warn'));
+  else if (i.busy === false) out.push(chip('idle', 'info'));
+  const n = i.counts || {};
+  if (n.all != null) out.push(chip(`${n.processed || 0} docs`, ''));
+  if (n.failed) out.push(chip(`${n.failed} failed`, 'warn'));
+  if (n.pending) out.push(chip(`${n.pending} pending`, 'warn'));
+  return out.join(' ');
+}
+
+function llmSection(c, engine, canMutate) {
+  const l = c.llm;
+  const flags = [];
+  if (l.in_sync === false) flags.push(chip('configured != running', 'warn'));
+  if (l.ready === false) flags.push(chip('NOT LOADED on the engine', 'bad'));
+  else if (l.ready === true) flags.push(chip('ready on the engine', 'ok'));
+  return `
+    <h3>LLM (query and extraction)</h3>
+    <div class="kv">
+      <div>running</div><div class="mono">${esc(l.live || '-')}</div>
+      <div>configured</div><div class="mono">${esc(l.configured)} ${flags.join(' ')}</div>
+    </div>
+    <div class="row">
+      <select id="llm-${esc(c.id)}" ${canMutate && engine.reachable ? '' : 'disabled'}>${llmOptions(c, engine)}</select>
+      <label class="chk"><input type="checkbox" id="force-${esc(c.id)}"> even if not loaded</label>
+      <button data-action="apply-llm" data-corpus="${esc(c.id)}" ${canMutate && engine.reachable ? '' : 'disabled'}>Apply</button>
+    </div>
+    <div class="note">Restarts this instance (about a minute, only when it is idle). The previous plist is kept and restored automatically if it does not come back healthy.${engine.reachable ? '' : ' The engine is unreachable: ready models cannot be listed.'}</div>`;
+}
+
+function indexedWithSection(c, canMutate) {
+  const iw = c.indexed_with, e = iw.embedder;
+  const cert = e.certified
+    ? `${chip('certified', 'ok')} <span class="muted">cosine median ${esc(e.certified.median_cos)}, min ${esc(e.certified.min_cos)} on ${esc(e.certified.samples)} stored chunks, ${esc(short(e.certified.at))}</span>`
+    : chip('not certified', 'warn');
+  const eras = iw.llm_eras.length
+    ? `<table><tr><th>Extraction model</th><th>Period</th><th>Docs</th><th>Source</th></tr>${
+        iw.llm_eras.map(x => `<tr><td class="mono">${esc(x.model)}</td><td>${esc(short(x.start))} &rarr; ${x.end ? esc(short(x.end)) : 'now'}</td><td>${x.docs == null ? '-' : esc(x.docs)}</td><td class="muted">${esc(x.source)}</td></tr>`).join('')}</table>`
+    : '<div class="muted">No history recorded.</div>';
+  return `
+    <h3>Indexed with</h3>
+    <div class="kv">
+      <div>embedder</div><div><span class="mono">${esc(e.weights || 'unknown weights')}</span> &middot; ${esc(e.dim)} dimensions</div>
+      <div>vector space</div><div>${cert} <button class="ghost" data-action="certify" data-corpus="${esc(c.id)}" ${canMutate ? '' : 'disabled'} style="margin-left:8px;padding:2px 10px">Certify</button></div>
+    </div>
+    <div class="note">LightRAG does not record which models built an index; this history is kept by OdyRAG.</div>
+    <div style="margin-top:8px">${eras}</div>`;
+}
+
+function embedderSection(c, canMutate) {
+  const m = c.embedder;
+  const certified = !!c.indexed_with.embedder.certified;
+  let space = chip('identity unknown', 'warn');
+  if (m.same_space === true) space = chip(`same space as the index (cosine ${m.cos_vs_index})`, 'ok');
+  else if (m.same_space === false) space = chip(`DIFFERENT space (cosine ${m.cos_vs_index})`, 'bad');
+  const live = m.live || {};
+  return `
+    <h3>Embedder</h3>
+    <div class="kv">
+      <div>status</div><div><span class="dot ${m.alive ? 'ok' : 'bad'}"></span> ${m.alive ? `alive, ${esc(m.latency_ms)} ms, ${esc(m.dim)} dims` : 'NOT ALIVE: ' + esc(m.error || '')} ${m.alive ? space : ''}</div>
+      <div>weights</div><div class="mono">${esc(m.weights || '-')}</div>
+      <div>running</div><div class="mono">${esc(live.url || '-')} &middot; ${esc(live.model || '-')}</div>
+    </div>
+    <div class="row">
+      <input type="text" id="emb-url-${esc(c.id)}" value="${esc(m.configured.url)}" placeholder="embedding endpoint (EMBEDDING_BINDING_HOST)">
+      <input type="text" id="emb-model-${esc(c.id)}" value="${esc(m.configured.model)}" placeholder="model" style="max-width:180px">
+      <button data-action="apply-embedder" data-corpus="${esc(c.id)}" ${canMutate && certified ? '' : 'disabled'}>Change</button>
+    </div>
+    <div class="note">${certified ? 'The new endpoint must produce the same vector space as the index (checked by cosine); a different space needs a re-index and is refused.' : 'Certify the index first: its vector space must be known before the embedder can be changed.'} Private networks only.</div>`;
+}
+
+function cardHtml(c, engine, canMutate) {
+  const start = (!c.instance.loaded && !c.instance.up)
+    ? `<button data-action="start" data-corpus="${esc(c.id)}" ${canMutate ? '' : 'disabled'}>Start instance</button>` : '';
+  return `<div class="card">
+    <h2>${esc(c.label)} ${instanceChips(c)} ${start}</h2>
+    <div class="muted mono" style="margin-top:2px">${esc(c.instance.url)} &middot; ${esc(c.instance.launchd_label)}</div>
+    ${llmSection(c, engine, canMutate)}
+    ${indexedWithSection(c, canMutate)}
+    ${embedderSection(c, canMutate)}
+  </div>`;
+}
+
+function render() {
+  if (!state) return;
+  const canMutate = state.mutations_enabled && !busyJob;
+  const banners = [];
+  if (!state.mutations_enabled) banners.push('<div class="banner warn">Read-only: no admin token is configured on the server, changes are disabled.</div>');
+  if (!state.engine.configured) banners.push('<div class="banner warn">No inference engine configured: ready models cannot be listed.</div>');
+  else if (!state.engine.reachable) banners.push('<div class="banner err">The inference engine is unreachable: LLM changes are disabled and model readiness is unknown.</div>');
+  state.corpora.forEach(c => {
+    if (c.llm.ready === false) banners.push(`<div class="banner err"><b>${esc(c.label)}</b>: configured model <span class="mono">${esc(c.llm.configured)}</span> is not loaded on the engine. Hybrid queries will answer "No relevant context found" until you pick a loaded model.</div>`);
+    if (c.embedder.same_space === false) banners.push(`<div class="banner err"><b>${esc(c.label)}</b>: the embedder it points to produces a different vector space than its index. Vector search is returning noise.</div>`);
+    if (!c.embedder.alive) banners.push(`<div class="banner err"><b>${esc(c.label)}</b>: its embedder is not answering.</div>`);
+  });
+  document.getElementById('banners').innerHTML = banners.join('');
+  const chipEl = document.getElementById('engine-chip');
+  chipEl.textContent = state.engine.reachable ? `engine: ${state.engine.ready_models.length} models ready` : (state.engine.configured ? 'engine unreachable' : 'engine not configured');
+  chipEl.className = 'chip ' + (state.engine.reachable ? 'ok' : 'bad');
+  // keep what the operator is typing / selecting across re-renders
+  const keep = {};
+  document.querySelectorAll('#grid select, #grid input').forEach(el => { keep[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+  const focused = document.activeElement && document.activeElement.id;
+  document.getElementById('grid').innerHTML = state.corpora.map(c => cardHtml(c, state.engine, canMutate)).join('')
+    || '<div class="muted">No corpus registered.</div>';
+  Object.entries(keep).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = v; else if (el.tagName !== 'SELECT' || [...el.options].some(o => o.value === v)) el.value = v;
+  });
+  if (focused) { const f = document.getElementById(focused); if (f) f.focus(); }
+  document.getElementById('updated').textContent = 'updated ' + new Date().toLocaleTimeString();
+}
+
+function renderAudit(items) {
+  const el = document.getElementById('audit');
+  if (!items.length) { el.textContent = 'Nothing yet.'; return; }
+  el.innerHTML = `<table><tr><th>When</th><th>Corpus</th><th>Action</th><th>Result</th></tr>${
+    items.slice(0, 10).map(a => `<tr><td>${esc(short(a.ts))}</td><td>${esc(a.corpus)}</td><td>${esc(a.kind)}</td><td>${a.status === 'done' ? chip('done', 'ok') : chip('failed', 'bad')} <span class="muted">${esc(a.error || '')}</span></td></tr>`).join('')}</table>`;
+}
+
+function renderJob(job) {
+  const el = document.getElementById('jobpanel');
+  el.classList.remove('hidden');
+  const t0 = job.started;
+  const steps = job.steps.map(s => `<div class="step"><span class="t">+${esc(Math.round(s.t - t0))}s</span><span class="dot ${s.ok ? 'ok' : 'bad'}" style="margin-top:5px"></span><span>${esc(s.step)} <span class="muted">${esc(s.detail)}</span></span></div>`).join('');
+  const head = job.status === 'running' ? chip('running', 'info') : (job.status === 'done' ? chip('done', 'ok') : chip('failed', 'bad'));
+  const tail = job.status === 'failed' ? `<div class="banner err" style="margin-top:10px">${esc(job.error)}</div>`
+             : job.status === 'done' && job.result ? `<div class="note">${esc(JSON.stringify(job.result))}</div>` : '';
+  el.innerHTML = `<h2>${esc(job.kind)} on ${esc(job.corpus)} ${head}</h2>${steps}${tail}`;
+}
+
+// ── data ─────────────────────────────────────────────────────────────────────
+async function refresh() {
+  try { state = await api('/api/overview'); render(); } catch (e) { document.getElementById('updated').textContent = 'error: ' + e.message; }
+  try { renderAudit(await api('/api/actions')); } catch (e) {}
+}
+
+async function trackJob(id) {
+  busyJob = true; render();
+  for (;;) {
+    let job;
+    try { job = await api('/api/jobs/' + id); } catch (e) { break; }
+    renderJob(job);
+    if (job.status !== 'running') break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  busyJob = false;
+  await refresh();
+}
+
+async function mutate(path, body, confirmText) {
+  if (confirmText && !window.confirm(confirmText)) return;
+  if (!ensureToken()) return;
+  try {
+    const r = await api(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
+    activeJob = r.job_id;
+    trackJob(r.job_id);
+  } catch (e) {
+    if (e.status === 401) { TOKEN = ''; try { sessionStorage.removeItem('odyrag_token'); } catch (x) {} }
+    window.alert('Refused: ' + e.message);
+  }
+}
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-action]');
+  if (!b || b.disabled) return;
+  const id = b.dataset.corpus;
+  const label = id && state ? (state.corpora.find(c => c.id === id) || {}).label : '';
+  switch (b.dataset.action) {
+    case 'refresh': refresh(); break;
+    case 'token': TOKEN = ''; try { sessionStorage.removeItem('odyrag_token'); } catch (x) {} ensureToken(); break;
+    case 'apply-llm': {
+      const model = document.getElementById('llm-' + id).value;
+      const force = document.getElementById('force-' + id).checked;
+      mutate(`/api/corpora/${encodeURIComponent(id)}/llm`, { model, force },
+        `Switch ${label} to "${model}"?\n\nThis instance restarts (about a minute). It is refused while the pipeline is extracting, and rolled back automatically if it does not come back healthy.`);
+      break;
+    }
+    case 'apply-embedder': {
+      const url = document.getElementById('emb-url-' + id).value, model = document.getElementById('emb-model-' + id).value;
+      mutate(`/api/corpora/${encodeURIComponent(id)}/embedder`, { url, model },
+        `Point ${label} at embedder "${model}" (${url})?\n\nIt is only accepted if it produces the same vector space as the index. The instance restarts.`);
+      break;
+    }
+    case 'certify':
+      mutate(`/api/corpora/${encodeURIComponent(id)}/certify`, null,
+        `Certify ${label}?\n\nRe-embeds a sample of its stored chunks with the embedder it uses and compares them with the stored vectors. Nothing is restarted.`);
+      break;
+    case 'start':
+      mutate(`/api/corpora/${encodeURIComponent(id)}/start`, null, `Start the stopped ${label} instance?`);
+      break;
+  }
+});
+
+refresh();
+setInterval(() => { if (!busyJob) refresh(); }, 10000);
+</script>
+</body>
+</html>

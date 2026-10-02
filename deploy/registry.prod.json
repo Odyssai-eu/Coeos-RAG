@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "corpora": {
+    "alpha": {
+      "label": "Alpha",
+      "instance": {
+        "url": "http://localhost:8766",
+        "launchd_label": "eu.odyssai.lightrag-webui",
+        "plist": "~/Library/LaunchAgents/eu.odyssai.lightrag-webui.plist",
+        "workdir": "~/nemo-memory-data/lightrag/company"
+      },
+      "llm": "qwen3-coder-30b",
+      "embedder": {"url": "http://localhost:8765", "model": "nemo-embed", "dim": 1024},
+      "indexed_with": {
+        "embedder": {"weights": null, "dim": 1024, "golden_probe": null, "golden_vec": null, "certified": null},
+        "llm_eras": [
+          {"model": "telerag1/2/3 (one model per shard)", "start": "2026-06-21", "end": "2026-06-26",
+           "source": "shard env backups on the host (shardN.env.bak-telerag1); boundaries from the backup dates"},
+          {"model": "telemak", "start": "2026-06-26", "end": "2026-06-27",
+           "source": "shard env backups (bak-pregleaning, bak-singlemodel)"},
+          {"model": "tele-fast:qwen3-coder-30b-a3b-instruct-6bit", "start": "2026-06-27", "end": "2026-09-25",
+           "source": "shard env after the single-model consolidation, then the consolidated instance plist"},
+          {"model": "qwen3", "start": "2026-09-25", "end": "2026-09-29",
+           "source": "instance plist; the 5 JEV documents ingested on 2026-09-25"},
+          {"model": "coeos", "start": "2026-09-29", "end": "2026-10-02",
+           "source": "instance plist (drift fix of 2026-09-29)"},
+          {"model": "qwen3-coder-30b", "start": "2026-10-02", "end": null,
+           "source": "instance plist (2026-10-02: same model, moved to another server)"}
+        ]
+      }
+    },
+    "company": {
+      "label": "Company",
+      "instance": {
+        "url": "http://localhost:8767",
+        "launchd_label": "eu.odyssai.lightrag-nemo",
+        "plist": "~/Library/LaunchAgents/eu.odyssai.lightrag-nemo.plist",
+        "workdir": "~/nemo-memory-data/lightrag/70767408-9318-4247-8e13-6d4a75caa071"
+      },
+      "llm": "qwen3-30b-instr",
+      "embedder": {"url": "http://localhost:8765", "model": "nemo-embed", "dim": 1024},
+      "indexed_with": {
+        "embedder": {"weights": null, "dim": 1024, "golden_probe": null, "golden_vec": null, "certified": null},
+        "llm_eras": [
+          {"model": "tele-fast:qwen3-coder-30b-a3b-instruct-6bit", "start": "2026-06-02", "end": "2026-10-02",
+           "source": "instance plist LLM_MODEL until 2026-10-02 (earlier history not recorded)"},
+          {"model": "qwen3-30b-instr", "start": "2026-10-02", "end": null,
+           "source": "instance plist (2026-10-02: same model, moved to another server)"}
+        ]
+      }
+    }
+  }
+}

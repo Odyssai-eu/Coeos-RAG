@@ -48,6 +48,7 @@ button.ghost { background:transparent; border:1px solid var(--border2); color:va
 table { width:100%; border-collapse:collapse; font-size:12px; }
 th { text-align:left; color:var(--muted); font-weight:600; padding:4px 8px 4px 0; border-bottom:1px solid var(--border); }
 td { padding:5px 8px 5px 0; border-bottom:1px solid var(--border); vertical-align:top; }
+th.num, td.num { white-space:nowrap; text-align:right; padding-right:14px; }
 .note { color:var(--muted); font-size:12px; margin-top:6px; }
 label.chk { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
 .panel { margin-top:22px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
@@ -163,8 +164,8 @@ function indexedWithSection(c, canMutate) {
     ? `${chip('certified', 'ok')} <span class="muted">cosine median ${esc(e.certified.median_cos)}, min ${esc(e.certified.min_cos)} on ${esc(e.certified.samples)} stored chunks, ${esc(short(e.certified.at))}</span>`
     : chip('not certified', 'warn');
   const eras = iw.llm_eras.length
-    ? `<table><tr><th>Extraction model</th><th>Period</th><th>Docs</th><th>Source</th></tr>${
-        iw.llm_eras.map(x => `<tr><td class="mono">${esc(x.model)}</td><td>${esc(short(x.start))} &rarr; ${x.end ? esc(short(x.end)) : 'now'}</td><td>${x.docs == null ? '-' : esc(x.docs)}</td><td class="muted">${esc(x.source)}</td></tr>`).join('')}</table>`
+    ? `<table><tr><th>Extraction model</th><th>Period</th><th class="num">Docs</th><th>Source</th></tr>${
+        iw.llm_eras.map(x => `<tr><td class="mono">${esc(x.model)}</td><td>${esc(short(x.start))} &rarr; ${x.end ? esc(short(x.end)) : 'now'}</td><td class="num">${x.docs == null ? '-' : esc(Number(x.docs).toLocaleString('en-US'))}</td><td class="muted">${esc(x.source)}</td></tr>`).join('')}</table>`
     : '<div class="muted">No history recorded.</div>';
   return `
     <h3>Indexed with</h3>

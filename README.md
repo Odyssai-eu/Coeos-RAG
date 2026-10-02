@@ -1,8 +1,24 @@
-# OdyssAI-RAG
+# OdyRAG
 
-Le plan de contrôle du parc RAG de la famille odyssai.eu. Il observe les corpus
-(instances LightRAG sur `.39`), dit avec quels modèles ils ont été indexés, et applique
-les changements de modèle **sans jamais s'interposer dans le chemin des requêtes**.
+> Branded knowledge-graph management layer for the **odyssai.eu** stack —
+> built on [LightRAG](https://github.com/HKUDS/LightRAG) (HKUDS, MIT License).
+
+OdyRAG is the day-to-day cockpit for the cluster of LightRAG instances that
+power Companion's memory and the alpha-centauri corpus ingestion: live
+monitoring, parallel injection, document management, querying, and a 3D
+"galaxy" view of the entity graph.
+
+Ce dépôt réunit deux pièces :
+
+- **Le dashboard de requête et d'ingestion** (`odyrag.html`, servi par OdyssAI-X) :
+  décrit dans [docs/cockpit-2026-06-21.md](docs/cockpit-2026-06-21.md), le README
+  d'origine conservé tel quel. Ses sections « Instances » et « Ingestion » sont
+  périmées : les 4 shards ont été fusionnés dans alpha (`:8766`, 2026-07-10) et
+  Qdrant est abandonné.
+- **Le plan de contrôle « Models »** (le code de ce dépôt, `odyrag/`) : ce qui suit.
+  Il observe les corpus (instances LightRAG sur `.39`), dit avec quels modèles ils ont
+  été indexés, et applique les changements de modèle **sans jamais s'interposer dans le
+  chemin des requêtes**.
 
 Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
 (la section « Mise à jour 2026-10-02 » prime là où elle contredit le reste).
@@ -137,4 +153,10 @@ qui vient d'être déployée.
 
 Plan de contrôle « Models » livré (LLM, ères, embedder, certification, rollback). Le
 reste du périmètre historique (ingestion, crawl, graphe, export Obsidian, veille) reste à
-cadrer dans les issues du repo.
+cadrer.
+
+## Licensing
+
+OdyRAG is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
+MIT License) and **3d-force-graph** (© Vasco Asturiano, MIT License); those
+upstream licenses are retained and credited.

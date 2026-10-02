@@ -4,6 +4,71 @@
 > du drain du tier company). Ce document est la référence : toute issue du repo
 > s'y rattache. Si une décision change, on édite ICI d'abord.
 
+## Mise à jour 2026-10-02 — état réel et réglages « Models »
+
+Cette section **prime** sur le reste du document là où elle le contredit.
+
+**État réel.** Qdrant `.44` est abandonné (Sophie, 2026-09-23 ; `.44` décommissionné
+sauf guardian). Les corpus vivent dans des **instances LightRAG sur `.39`**, une par
+corpus (working dir, port et service launchd propres) :
+
+| Corpus | Instance | Contenu |
+|---|---|---|
+| alpha | `:8766` (`eu.odyssai.lightrag-webui`) | corpus consolidé : 112 667 docs, 161 375 entités, 284 219 relations (merge des 4 shards, 2026-07-10) |
+| company | `:8767` (`eu.odyssai.lightrag-nemo`) | mémoire Nemo/Companion, 156 docs |
+
+**Séparation OdyssAI.** OdyRAG et OdyssAI-X sont deux projets distincts. OdyRAG
+**consomme** l'API publique `/v1` d'OdyssAI-X comme n'importe quel client et ne la
+modifie jamais (décision Sophie, 2026-10-02 : « tu ne peux rien modifier sur odyssai »).
+
+**Réglages « Models » par corpus (décision).** Un LLM et un embedder par corpus,
+visibles et modifiables depuis le dashboard, avec ce que LightRAG ne sait pas dire :
+*avec quel modèle le corpus a été indexé*.
+- LightRAG lit `LLM_MODEL` / `EMBEDDING_*` de l'environnement de son process au
+  démarrage uniquement. Changer un réglage = **modifier le plist de l'instance puis la
+  redémarrer**. Le dashboard est donc un **plan de contrôle qui applique**, il ne
+  s'interpose pas : *pas de passerelle LLM/embedding dans le data path* (principe
+  fondateur ci-dessus ; une passerelle serait un point de défaillance unique de toutes
+  les requêtes RAG).
+- Chaque changement suit les cicatrices du 2026-06-12 : **backup du plist avant
+  mutation**, refus si l'instance est `busy` (on ne redémarre jamais une instance en
+  cours d'extraction : corruption de `doc_status`), **vérification de l'effet** après
+  redémarrage (`/health` reporte bien le nouveau modèle), **rollback** automatique si
+  l'instance ne revient pas saine, entrée dans le journal d'actions.
+- **Détection de dérive.** Les ids de modèles du moteur changent (5 pannes en 3 mois :
+  ids déplacés/renommés, auto-swap off). Le dashboard compare le modèle configuré à la
+  liste des modèles prêts du moteur et signale en rouge « modèle non chargé » *avant*
+  que les requêtes hybrid ne renvoient « No relevant context found ».
+- **« Indexé avec ».** LightRAG n'enregistre le modèle d'indexation nulle part (ni cache,
+  ni `doc_status`, ni vdb : seulement `embedding_dim`). Le registre le porte : une
+  **liste d'ères** (modèle d'extraction, dates, source de l'information) étendue à chaque
+  changement, plus l'**identité de l'espace vectoriel** de l'index.
+- **Embedder : la dimension n'est pas l'identité.** `nemo-embed` (Qwen3-Embedding) et
+  `bge-m3` font tous deux 1024 dimensions mais n'ont pas le même espace : échanger l'un
+  contre l'autre ne produit aucune erreur et rend la recherche vectorielle aléatoire.
+  L'identité se vérifie par **cosinus** : recalcul d'un échantillon de chunks stockés
+  (certification de l'index) puis vecteur étalon d'une phrase test. Un embedder dont le
+  cosinus est sous le seuil est refusé. Changer *d'espace* = ré-indexer, pas un réglage.
+  Valeurs **mesurées** sur l'index alpha réel (24 chunks, 2026-10-02) :
+
+  | Comparaison | min | médiane | max |
+  |---|---|---|---|
+  | vecteurs stockés vs même embedder, **un texte par appel** | 1.0000 | 1.0000 | 1.0000 |
+  | vecteurs stockés vs même embedder, **lots de 8** | 0.756 | 0.913 | 1.0000 |
+  | vecteurs stockés vs autre embedder de même dimension (bge-m3) | -0.054 | -0.005 | 0.062 |
+
+  Conséquences : la certification embarque **un seul texte par requête** (le padding des
+  lots déplace les vecteurs d'un même embedder) ; l'identité d'un embedder qu'on branche
+  se juge sur le vecteur étalon (seuil 0.98, mêmes conditions) ; la certification d'un
+  index accepte médiane ≥ 0.80 et plancher ≥ 0.50, car un index construit en lots n'est
+  pas reproductible au bit près, alors qu'un autre espace tombe autour de 0.
+- **Hors périmètre.** Aucun accès en écriture au moteur OdyssAI-X, aucun redémarrage du
+  moteur. Les URL d'embedder sont restreintes aux réseaux privés (le texte des
+  documents transite par cette URL).
+- **Forme.** Le dashboard tourne en **process hôte** (LaunchAgent `eu.odyssai.odyrag`,
+  non en container) parce qu'il doit lire/écrire les plists et appeler `launchctl` ;
+  cela amende la mention « container `odyssai-rag` » de la v1.
+
 ## Position dans la famille odyssai.eu
 
 | Produit | Rôle | Ce qu'il ne fait PAS |

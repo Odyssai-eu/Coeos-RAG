@@ -841,6 +841,12 @@
               <label for="llm-model">Modèle</label>
               <select id="llm-model" class="mono"></select>
             </div>
+            <div class="field narrow">
+              <label for="llm-async">Requêtes en parallèle</label>
+              <input type="number" id="llm-async" min="1" max="64" step="1" value="${esc(c.engine.max_async == null ? '' : c.engine.max_async)}">
+            </div>
+            <div class="help">Nombre d'appels au modèle que l'instance envoie en même temps. À régler selon le pool derrière l'endpoint : un nœud seul n'en sert qu'un ou deux à la fois, un pool de répliques environ deux par nœud. Au-delà, les appels dépassent le délai de LightRAG et les documents échouent.</div>
+            <p class="error" id="async-error"></p>
             <label class="check"><input type="checkbox" id="llm-force"> Appliquer même si le modèle n'est pas chargé</label>
             <div class="row" data-region="llm-apply"></div>
           </div>
@@ -900,6 +906,7 @@
       <dt>En service</dt><dd class="mono">${esc(l.live || '-')}</dd>
       <dt>Configuré</dt><dd><span class="mono">${esc(l.configured || '-')}</span>${sync}</dd>
       <dt>Endpoint</dt><dd><span class="mono">${esc(e.endpoint.effective || '-')}</span> ${reach}</dd>
+      <dt>En parallèle</dt><dd class="num">${e.max_async == null ? '-' : esc(e.max_async) + (Number(e.max_async) > 1 ? ' requêtes' : ' requête')}</dd>
       <dt>État</dt><dd>${st}</dd>
     </dl>${ver ? `<div class="mt">${ver}</div>` : ''}`;
   }
@@ -1024,7 +1031,19 @@
     const current = (c.engine.endpoint.effective || '').replace(/\/+$/, '');
     const endpoint = typed && typed !== current ? typed : null;
     const force = $('#llm-force').checked;
-    mutate(`/api/corpora/${encodeURIComponent(c.id)}/llm`, { model, endpoint, force }, {
+    const rawAsync = $('#llm-async').value.trim();
+    const asyncErr = $('#async-error');
+    asyncErr.textContent = '';
+    let max_async = null;
+    if (rawAsync !== '') {
+      const n = Number(rawAsync);
+      if (!Number.isInteger(n) || n < 1 || n > 64) {
+        asyncErr.textContent = 'Entrez un nombre entier entre 1 et 64.';
+        return;
+      }
+      if (n !== c.engine.max_async) max_async = n;
+    }
+    mutate(`/api/corpora/${encodeURIComponent(c.id)}/llm`, { model, endpoint, force, max_async }, {
       title: 'Appliquer ce réglage ?',
       text: `${c.label} redémarre (environ une minute). Le changement est refusé pendant une extraction, et annulé automatiquement si l'instance ne revient pas saine.`,
       ok: 'Appliquer',

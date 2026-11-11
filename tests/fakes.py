@@ -160,6 +160,7 @@ class FakeWorld:
             return httpx.Response(200, json={"status": "healthy", "core_version": "1.4.16", "configuration": {
                 "llm_model": env.get("LLM_MODEL"),
                 "llm_binding_host": env.get("LLM_BINDING_HOST"),
+                "max_async": int(env.get("MAX_ASYNC", 4)),  # LightRAG's own default
                 "embedding_binding_host": env.get("EMBEDDING_BINDING_HOST"),
                 "embedding_model": env.get("EMBEDDING_MODEL"),
             }})

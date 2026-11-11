@@ -36,6 +36,7 @@ class LlmChange(BaseModel):
     model: str
     force: bool = False
     endpoint: Optional[str] = None
+    max_async: Optional[int] = None
 
 
 class EndpointProbe(BaseModel):
@@ -142,7 +143,7 @@ def create_app(
     @app.post("/api/corpora/{corpus_id}/llm", status_code=202, dependencies=[Depends(require_admin)])
     async def change_llm(corpus_id: str, body: LlmChange) -> dict:
         return launch(corpus_id, "llm", lambda log: controller().apply_llm(
-            corpus_id, body.model, log, force=body.force, endpoint=body.endpoint))
+            corpus_id, body.model, log, force=body.force, endpoint=body.endpoint, max_async=body.max_async))
 
     @app.post("/api/corpora/{corpus_id}/embedder", status_code=202, dependencies=[Depends(require_admin)])
     async def change_embedder(corpus_id: str, body: EmbedderChange) -> dict:

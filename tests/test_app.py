@@ -142,3 +142,13 @@ async def test_endpoint_probe_needs_the_token_and_lists_models(env):
     assert r.status_code == 200 and "moved-model" in {m["id"] for m in r.json()["models"]}
     r = await c.post("/api/endpoint/models", json={"url": "http://8.8.8.8:1/v1"}, headers=AUTH)
     assert r.status_code == 422
+
+
+async def test_llm_change_can_set_the_parallelism(env):
+    c, world, *_ = env
+    r = await c.post("/api/corpora/alpha/llm", json={"model": "new-model", "max_async": 8}, headers=AUTH)
+    job = await wait_job(c, r.json()["job_id"])
+    assert job["status"] == "done" and job["result"]["live"]["max_async"] == 8
+    r = await c.post("/api/corpora/alpha/llm", json={"model": "new-model", "max_async": 0}, headers=AUTH)
+    job = await wait_job(c, r.json()["job_id"])
+    assert job["status"] == "failed" and "max_async" in job["error"]

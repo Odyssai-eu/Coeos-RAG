@@ -29,6 +29,10 @@ from .registry import (
 Log = Callable[[str, bool, str], None]
 
 POLL_INTERVAL_S = 2.0
+# Concurrent LLM calls a LightRAG instance may send (its MAX_ASYNC). The right value depends
+# on the pool behind the endpoint: one node cannot use more than one or two, a replica pool
+# takes about two per node before requests outlast LightRAG's own timeout.
+MAX_ASYNC_RANGE = (1, 64)
 # launchctl exit codes meaning "this service is not loaded": not an error for bootout.
 _NOT_LOADED_RC = (3, 113)
 
@@ -179,7 +183,7 @@ class Controller:
             return {
                 "changed": True, "corpus": corpus_id, "applied": updates, "backup": str(bak),
                 "took_s": round(self._clock() - t0, 1),
-                "live": {k: cfg.get(k) for k in ("llm_model", "llm_binding_host", "embedding_binding_host", "embedding_model")},
+                "live": {k: cfg.get(k) for k in ("llm_model", "llm_binding_host", "max_async", "embedding_binding_host", "embedding_model")},
             }
 
     async def _restart(self, corpus: Corpus, inst: LightRagClient, log: Log) -> None:
@@ -215,7 +219,7 @@ class Controller:
 
     # ── public operations ──────────────────────────────────────────────────
     async def apply_llm(self, corpus_id: str, model: str, log: Log, *, force: bool = False,
-                        endpoint: Optional[str] = None) -> dict:
+                        endpoint: Optional[str] = None, max_async: Optional[int] = None) -> dict:
         corpus = self._corpus(corpus_id)
         model = (model or "").strip()
         if not model:
@@ -226,6 +230,8 @@ class Controller:
                 emb.validate_embedder_url(endpoint, what="LLM endpoint")
             except ValueError as e:
                 raise ChangeError(str(e), status=422) from e
+        if max_async is not None and not (MAX_ASYNC_RANGE[0] <= max_async <= MAX_ASYNC_RANGE[1]):
+            raise ChangeError(f"max_async must be between {MAX_ASYNC_RANGE[0]} and {MAX_ASYNC_RANGE[1]}", status=422)
         live = await self._lr(corpus).health()
         cfg = (live or {}).get("configuration") or {}
         live_llm = cfg.get("llm_model")
@@ -238,12 +244,15 @@ class Controller:
             if model not in ready:
                 raise ChangeError(f"model {model!r} is not loaded on the engine")
         endpoint_changes = endpoint is not None and endpoint != live_ep
-        if live_llm == model and corpus.llm == model and not endpoint_changes:
+        async_changes = max_async is not None and cfg.get("max_async") != max_async
+        if live_llm == model and corpus.llm == model and not endpoint_changes and not async_changes:
             return {"changed": False, "corpus": corpus_id, "note": "already applied"}
 
         updates = {"LLM_MODEL": model}
         if endpoint_changes:
             updates["LLM_BINDING_HOST"] = endpoint
+        if async_changes:
+            updates["MAX_ASYNC"] = str(max_async)
 
         def commit(c: Corpus, now: str) -> None:
             c.llm = model
@@ -254,12 +263,16 @@ class Controller:
         def check(c: dict) -> bool:
             if c.get("llm_model") != model:
                 return False
+            if async_changes and c.get("max_async") != max_async:
+                return False
             return (not endpoint_changes) or (c.get("llm_binding_host") or "").rstrip("/") == endpoint
 
         def describe(c: dict) -> str:
             text = f"llm_model={c.get('llm_model')!r}"
             if endpoint_changes:
                 text += f", llm_binding_host={c.get('llm_binding_host')!r}"
+            if async_changes:
+                text += f", max_async={c.get('max_async')!r}"
             return text
 
         return await self._apply(corpus_id, updates, check=check, describe_live=describe, commit=commit, log=log)
@@ -434,6 +447,7 @@ class Controller:
                              "live": (cfg.get("llm_binding_host") or None), "effective": ep},
                 "reachable": ready is not None,
                 "ready_models": sorted(ready) if ready is not None else None,
+                "max_async": cfg.get("max_async"),
             },
             "embedder": {
                 "configured": corpus.embedder.model_dump(),

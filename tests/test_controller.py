@@ -386,7 +386,7 @@ async def test_overview_reports_the_engine_of_each_corpus(tmp_path):
     ctl, world, *_ = build(tmp_path)
     c = (await ctl.overview())["corpora"][0]
     assert c["engine"] == {"endpoint": {"configured": None, "live": f"{ENGINE}/v1", "effective": f"{ENGINE}/v1"},
-                           "reachable": True, "ready_models": ["new-model", "old-model"]}
+                           "reachable": True, "ready_models": ["new-model", "old-model"], "max_async": 4}
     assert c["instance"]["public_url"] is None
     assert c["instance"]["version"] == "1.4.16"
 
@@ -403,3 +403,46 @@ async def test_probe_endpoint_lists_models_and_refuses_public_hosts(tmp_path):
     with pytest.raises(ChangeError) as e:
         await ctl.probe_endpoint("http://8.8.8.8:1/v1")
     assert e.value.status == 422
+
+
+# ── parallelism: how many LLM calls the instance may send at once ─────────
+
+async def test_apply_llm_sets_the_parallelism_with_the_model(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    _, log = collector()
+    res = await ctl.apply_llm("alpha", "new-model", log, max_async=8)
+    assert res["changed"] and res["live"]["max_async"] == 8 and res["live"]["llm_model"] == "new-model"
+    assert plist_env(tmp_path)["MAX_ASYNC"] == "8"
+    assert (await ctl.overview())["corpora"][0]["engine"]["max_async"] == 8
+
+
+async def test_parallelism_only_change_restarts_and_keeps_the_model(tmp_path):
+    ctl, world, *_ = build(tmp_path)
+    _, log = collector()
+    res = await ctl.apply_llm("alpha", "old-model", log, max_async=2)
+    assert res["changed"] and plist_env(tmp_path)["LLM_MODEL"] == "old-model" and plist_env(tmp_path)["MAX_ASYNC"] == "2"
+    assert "bootout" in world.calls
+    world.calls.clear()
+    again = await ctl.apply_llm("alpha", "old-model", log, max_async=2)
+    assert again == {"changed": False, "corpus": "alpha", "note": "already applied"} and "bootout" not in world.calls
+
+
+async def test_parallelism_out_of_range_is_refused_before_anything_moves(tmp_path):
+    ctl, world, *_ = build(tmp_path)
+    _, log = collector()
+    for bad in (0, -1, 65, 1000):
+        with pytest.raises(ChangeError) as e:
+            await ctl.apply_llm("alpha", "new-model", log, max_async=bad)
+        assert e.value.status == 422
+    assert "bootout" not in world.calls and "MAX_ASYNC" not in plist_env(tmp_path)
+
+
+async def test_parallelism_is_rolled_back_with_the_model(tmp_path):
+    ctl, world, *_ = build(tmp_path)
+    world.fail_bootstrap = 1
+    _, log = collector()
+    with pytest.raises(ChangeError) as e:
+        await ctl.apply_llm("alpha", "new-model", log, max_async=8)
+    assert e.value.rolled_back is True
+    env = plist_env(tmp_path)
+    assert env["LLM_MODEL"] == "old-model" and "MAX_ASYNC" not in env

@@ -120,7 +120,7 @@ def main() -> None:
                 "configuration": {"llm_model": env.get("LLM_MODEL"), "llm_binding_host": env.get("LLM_BINDING_HOST"),
                                   "embedding_model": env.get("EMBEDDING_MODEL"),
                                   "embedding_binding_host": env.get("EMBEDDING_BINDING_HOST"),
-                                  "enable_rerank": False, "rerank_model": None, "max_async": 4,
+                                  "enable_rerank": False, "rerank_model": None, "max_async": int(env.get("MAX_ASYNC", 4)),
                                   "max_parallel_insert": 2, "summary_language": "English"}}
 
     @lr.get("/documents/status_counts")

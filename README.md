@@ -31,6 +31,12 @@ Installation, mise à jour et exploitation : [AGENTS.md](AGENTS.md).
   ce qu'il publie, et le changement s'applique comme un changement de modèle. La
   vérification « modèle prêt » regarde l'endpoint que l'instance appelle réellement
   (`LLM_BINDING_HOST`), pas une adresse globale.
+- **Requêtes en parallèle par corpus** : le nombre d'appels au modèle que l'instance envoie
+  en même temps (`MAX_ASYNC` de LightRAG), réglable avec le modèle. Il dépend du pool
+  derrière l'endpoint : un nœud seul n'en sert qu'un ou deux à la fois, un pool de répliques
+  environ deux par nœud. Trop haut, les appels dépassent le délai de LightRAG et les
+  documents échouent ; un prompt d'extraction pèse plusieurs milliers de tokens, un banc à
+  prompt court surestime donc ce qu'un pool supporte.
 - **Un seul LLM par instance** : LightRAG 1.4.16 utilise le même modèle pour l'extraction
   et pour la requête. Les modèles séparés par rôle n'existent qu'à partir de LightRAG 1.5 ;
   l'interface le dit au lieu d'afficher un sélecteur qui n'aurait aucun effet.
@@ -85,7 +91,7 @@ mêmes étapes, dans l'ordre :
   texte des documents transite par cette URL.
 - Les URL d'endpoint LLM suivent la même règle (réseau privé uniquement), y compris pour
   « Lister les modèles », qui exige le jeton.
-- Seules cinq clés du plist sont modifiables : `LLM_MODEL`, `LLM_BINDING_HOST`,
+- Seules six clés du plist sont modifiables : `LLM_MODEL`, `LLM_BINDING_HOST`, `MAX_ASYNC`,
   `EMBEDDING_BINDING_HOST`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`.
 - Aucune adresse, hôte ni port en dur dans le code : tout vient de l'environnement du
   service ou du registre.
@@ -130,7 +136,7 @@ jamais écrasé par un déploiement.
 | `GET /api/overview` | état vivant de chaque corpus : instance, modèle, endpoint et modèles prêts, embedder, ères |
 | `GET /api/jobs`, `/api/jobs/{id}` | suivi des changements |
 | `GET /api/actions` | journal d'actions |
-| `POST /api/corpora/{id}/llm` `{"model", "endpoint", "force"}` | changer le LLM et, si `endpoint` est donné, son endpoint (202 + `job_id`) |
+| `POST /api/corpora/{id}/llm` `{"model", "endpoint", "max_async", "force"}` | changer le LLM et, s'ils sont donnés, son endpoint et son nombre de requêtes en parallèle (202 + `job_id`) |
 | `POST /api/endpoint/models` `{"url"}` | lister les modèles publiés par un endpoint (jeton requis) |
 | `POST /api/corpora/{id}/embedder` `{"url", "model"}` | changer l'embedder (202) |
 | `POST /api/corpora/{id}/certify` | certifier l'index (202) |

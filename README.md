@@ -1,33 +1,41 @@
-# OdyRAG
+# Coeos-Rag
 
-> Branded knowledge-graph management layer for the **odyssai.eu** stack —
-> built on [LightRAG](https://github.com/HKUDS/LightRAG) (HKUDS, MIT License).
+> La console de gestion du RAG de la stack Coeos : corpus, documents, requêtes et
+> modèles. Construit sur [LightRAG](https://github.com/HKUDS/LightRAG) (HKUDS, MIT License).
+> Anciennement OdyRAG : le nom du produit a changé le 2026-11-11, les identifiants
+> techniques (`odyrag`, `ODYRAG_*`, `~/.odyrag`, `eu.odyssai.odyrag`) restent.
 
-OdyRAG is the day-to-day cockpit for the cluster of LightRAG instances that
-power Companion's memory and the alpha-centauri corpus ingestion: live
-monitoring, parallel injection, document management, querying, and a 3D
-"galaxy" view of the entity graph.
+Une seule interface, servie par ce service, avec une règle : **le navigateur parle en
+direct aux instances LightRAG** pour les documents, la file de traitement et la requête ;
+ce service ne garde que ce que LightRAG ne sait pas faire (changer de modèle ou d'endpoint,
+changer d'embedder, certifier un index, tenir le journal). Aucun proxy, donc rien à
+maintenir quand LightRAG change de version, et **rien dans le chemin des requêtes** de
+Companion.
 
-Ce dépôt réunit deux pièces :
+Cinq sections : Vue d'ensemble, Documents (injection de fichiers et de texte, file de
+traitement, liste filtrable), Requête, Modèles, Journal.
 
-- **Le dashboard de requête et d'ingestion** (`odyrag.html`, servi par OdyssAI-X) :
-  décrit dans [docs/cockpit-2026-06-21.md](docs/cockpit-2026-06-21.md), le README
-  d'origine conservé tel quel. Ses sections « Instances » et « Ingestion » sont
-  périmées : les 4 shards ont été fusionnés dans alpha (`:8766`, 2026-07-10) et
-  Qdrant est abandonné.
-- **Le plan de contrôle « Models »** (le code de ce dépôt, `odyrag/`) : ce qui suit.
-  Il observe les corpus (instances LightRAG sur `.39`), dit avec quels modèles ils ont
-  été indexés, et applique les changements de modèle **sans jamais s'interposer dans le
-  chemin des requêtes**.
+L'ancien cockpit (`odyrag.html`, servi par OdyssAI-X) est décrit dans
+[docs/cockpit-2026-06-21.md](docs/cockpit-2026-06-21.md), conservé pour mémoire : ses
+sections « Instances » et « Ingestion » sont périmées (les 4 shards ont été fusionnés dans
+alpha le 2026-07-10, Qdrant est abandonné).
 
 Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
 (la section « Mise à jour 2026-10-02 » prime là où elle contredit le reste).
 
-## Ce que ça fait — réglages « Models » par corpus
+## Ce que ça fait — réglages « Modèles » par corpus
 
-- **LLM par corpus** : liste des modèles *prêts* du moteur (lecture de `/v1/models`),
-  changement en un clic. Un modèle configuré mais absent ou déchargé côté moteur est
-  signalé *avant* que les requêtes ne renvoient « No relevant context found ».
+- **LLM par corpus** : liste des modèles *prêts* (lecture de `<endpoint>/models`),
+  changement en un clic. Un modèle configuré mais absent ou déchargé est signalé *avant*
+  que les requêtes ne renvoient « No relevant context found ».
+- **Endpoint du LLM par corpus** : quand le serveur de modèles change d'adresse ou publie
+  un nom légèrement différent, on saisit le nouvel endpoint, « Lister les modèles » montre
+  ce qu'il publie, et le changement s'applique comme un changement de modèle. La
+  vérification « modèle prêt » regarde l'endpoint que l'instance appelle réellement
+  (`LLM_BINDING_HOST`), pas une adresse globale.
+- **Un seul LLM par instance** : LightRAG 1.4.16 utilise le même modèle pour l'extraction
+  et pour la requête. Les modèles séparés par rôle n'existent qu'à partir de LightRAG 1.5 ;
+  l'interface le dit au lieu d'afficher un sélecteur qui n'aurait aucun effet.
 - **Indexé avec** : LightRAG n'enregistre pas le modèle d'indexation. Le registre tient
   une liste d'*ères* (modèle d'extraction, dates, source de l'information, nombre de
   documents ingérés pendant l'ère) et l'*identité de l'espace vectoriel* de l'index.
@@ -43,6 +51,11 @@ Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
 
 - Pas de passerelle LLM ni embedding dans le data path : une passerelle serait un point
   de défaillance unique de toutes les requêtes RAG.
+- Pas de proxy vers LightRAG : l'interface appelle les instances depuis le navigateur.
+  Conséquence : les instances doivent être joignables depuis le poste de l'opérateur, et
+  leurs actions sur les documents ne passent pas par le jeton de ce service (LightRAG a sa
+  propre authentification, aujourd'hui désactivée sur les deux instances).
+- Pas de suppression de documents, pas d'édition du graphe, pas de vue 3D.
 - Aucune écriture sur le moteur OdyssAI-X : c'est un projet distinct, OdyRAG n'en est
   qu'un client public (`GET /v1/models`).
 - Pas de ré-indexation, pas de changement d'espace vectoriel.
@@ -71,8 +84,10 @@ mêmes étapes, dans l'ordre :
   mode 0600) et n'est jamais affiché.
 - Les URL d'embedder doivent résoudre vers un réseau privé, loopback ou link-local : le
   texte des documents transite par cette URL.
-- Seules quatre clés du plist sont modifiables : `LLM_MODEL`, `EMBEDDING_BINDING_HOST`,
-  `EMBEDDING_MODEL`, `EMBEDDING_DIM`.
+- Les URL d'endpoint LLM suivent la même règle (réseau privé uniquement), y compris pour
+  « Lister les modèles », qui exige le jeton.
+- Seules cinq clés du plist sont modifiables : `LLM_MODEL`, `LLM_BINDING_HOST`,
+  `EMBEDDING_BINDING_HOST`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`.
 - Aucune adresse, hôte ni port en dur dans le code : tout vient de l'environnement du
   service ou du registre.
 
@@ -83,7 +98,7 @@ Variables d'environnement (posées dans le plist du LaunchAgent par `deploy/depl
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `ODYRAG_STATE_DIR` | registre, journal d'actions | `~/.odyrag` |
-| `ODYRAG_ENGINE_URL` | API publique du moteur d'inférence (lecture de `/v1/models`) | aucun (changement de LLM refusé sauf `force`) |
+| `ODYRAG_ENGINE_URL` | moteur d'inférence de repli, utilisé seulement quand ni l'instance ni le registre ne donnent l'endpoint du corpus | aucun |
 | `ODYRAG_ADMIN_TOKEN` | jeton des mutations | aucun (lecture seule) |
 | `ODYRAG_LAUNCHD_UID` | uid de la session launchd | uid courant |
 | `ODYRAG_WAIT_DOWN_S` / `ODYRAG_WAIT_UP_S` | attente d'arrêt / de retour sain | 120 / 300 |
@@ -97,9 +112,12 @@ même dimension : autour de 0).
 
 ### Registre (`<ODYRAG_STATE_DIR>/registry.json`)
 
-Un objet par corpus : `label`, `instance` (`url`, `launchd_label`, `plist`, `workdir`),
-`llm`, `embedder` (`url`, `model`, `dim`), `indexed_with` (`embedder` = identité de
-l'espace, `llm_eras` = historique). Écriture atomique. Le registre de production est
+Un objet par corpus : `label`, `instance` (`url`, `launchd_label`, `plist`, `workdir`,
+`public_url` optionnel), `llm`, `llm_endpoint` (optionnel, posé au premier changement),
+`embedder` (`url`, `model`, `dim`), `indexed_with` (`embedder` = identité de l'espace,
+`llm_eras` = historique). `instance.url` est l'adresse vue depuis l'hôte ; le navigateur
+remplace un nom de boucle locale par le nom d'hôte de la page, sauf si `public_url` dit
+explicitement comment joindre l'instance. Écriture atomique. Le registre de production est
 semé depuis [deploy/registry.prod.json](deploy/registry.prod.json) une seule fois et n'est
 jamais écrasé par un déploiement.
 
@@ -108,11 +126,12 @@ jamais écrasé par un déploiement.
 | Route | |
 |---|---|
 | `GET /health` | version du service |
-| `GET /` | dashboard |
-| `GET /api/overview` | état vivant de chaque corpus, dérive, ères, embedder, moteur |
+| `GET /` , `/static/*` | l'interface |
+| `GET /api/overview` | état vivant de chaque corpus : instance, modèle, endpoint et modèles prêts, embedder, ères |
 | `GET /api/jobs`, `/api/jobs/{id}` | suivi des changements |
 | `GET /api/actions` | journal d'actions |
-| `POST /api/corpora/{id}/llm` `{"model", "force"}` | changer le LLM (202 + `job_id`) |
+| `POST /api/corpora/{id}/llm` `{"model", "endpoint", "force"}` | changer le LLM et, si `endpoint` est donné, son endpoint (202 + `job_id`) |
+| `POST /api/endpoint/models` `{"url"}` | lister les modèles publiés par un endpoint (jeton requis) |
 | `POST /api/corpora/{id}/embedder` `{"url", "model"}` | changer l'embedder (202) |
 | `POST /api/corpora/{id}/certify` | certifier l'index (202) |
 | `POST /api/corpora/{id}/start` | recharger une instance arrêtée (202) |
@@ -121,13 +140,15 @@ jamais écrasé par un déploiement.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest -q          # 75 tests, aucun réseau, aucun launchd
-.venv/bin/python -m tests.dev_server   # dashboard de démo sur 127.0.0.1:8780, monde simulé
+.venv/bin/python -m pytest -q          # aucun réseau, aucun launchd
+.venv/bin/python -m tests.dev_server   # interface de démo sur 127.0.0.1:8780, monde simulé (jeton : dev)
 ```
 
 Les tests tournent contre un simulateur (`tests/fakes.py`) de launchd, de LightRAG, de
 l'embedder et du moteur, branché sur `httpx.MockTransport`. Le serveur de démo expose des
-boutons de panne (`/dev/world`) pour voir le rollback, le refus « busy » ou la dérive.
+boutons de panne (`/dev/world`) pour voir le rollback, le refus « busy » ou la dérive, et
+un faux LightRAG (`/dev/lightrag`) pour que les sections Documents et Requête fonctionnent
+sans instance réelle.
 
 `tests/e2e_real_host.py` est le test de bout en bout **sur l'hôte réel** : une instance
 LightRAG jetable (port, répertoire et label launchd dédiés, refus de démarrer si le port
@@ -151,12 +172,12 @@ qui vient d'être déployée.
 
 ## Statut
 
-Plan de contrôle « Models » livré (LLM, ères, embedder, certification, rollback). Le
-reste du périmètre historique (ingestion, crawl, graphe, export Obsidian, veille) reste à
-cadrer.
+0.2.0 : console complète (documents, file, requête, modèles, endpoint, embedder,
+certification, journal). Restent à cadrer : modèles séparés par rôle (exige LightRAG 1.5),
+suppression vérifiée de documents, graphe, veille.
 
 ## Licensing
 
-OdyRAG is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
+Coeos-Rag is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
 MIT License) and **3d-force-graph** (© Vasco Asturiano, MIT License); those
 upstream licenses are retained and credited.

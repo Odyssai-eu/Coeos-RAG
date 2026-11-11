@@ -4,6 +4,39 @@
 > du drain du tier company). Ce document est la référence : toute issue du repo
 > s'y rattache. Si une décision change, on édite ICI d'abord.
 
+## Mise à jour 2026-11-11 — Coeos-Rag, la console complète
+
+Cette section **prime** sur tout le reste du document.
+
+**Nom.** Le produit s'appelle Coeos-Rag. Seul le visible change (titre, interface, logo) ;
+le package `odyrag`, les variables `ODYRAG_*`, `~/.odyrag` et le label launchd restent.
+
+**Forme (décision Sophie, 2026-11-11, sur proposition du panel).** Une seule interface,
+servie par ce service. Le navigateur appelle **directement** les instances LightRAG pour
+les documents, la file et la requête ; ce service ne porte que ce que LightRAG ne sait pas
+faire (modèle, endpoint, embedder, certification, journal). Pas de proxy : faits vérifiés
+le jour même, les instances acceptent les appels d'une autre origine et leur
+authentification est désactivée, donc un proxy authentifié n'aurait rien protégé et aurait
+dû suivre chaque version de LightRAG. Cela remplace le « fork `lightrag_webui` + gateway »
+du découpage v1 plus bas.
+
+**Endpoint du LLM par corpus.** `LLM_BINDING_HOST` rejoint les clés modifiables. Un
+changement d'endpoint emprunte exactement le chemin d'un changement de modèle (backup,
+refus si occupé, redémarrage, vérification des deux valeurs, rollback des deux). La
+vérification « modèle prêt » lit `<endpoint du corpus>/models` : l'endpoint rapporté par
+l'instance, sinon celui du registre, sinon `ODYRAG_ENGINE_URL`.
+
+**Un LLM par instance.** LightRAG 1.4.16 (les deux instances) n'a qu'un modèle pour
+l'extraction et la requête. Les rôles EXTRACT / QUERY / KEYWORDS arrivent en 1.5.0. Les
+séparer est une montée de version des instances, à décider à part (stores JSON non
+atomiques, alpha = 112 776 documents).
+
+**État mesuré le 2026-11-11.** alpha : 112 776 documents traités, 0 en échec, dernier
+traitement le 21 octobre. company : 156 documents dont 64 « en échec » qui sont tous des
+doublons refusés (« Content already exists »), dernier document neuf le 10 août. L'embedder
+des deux corpus reste `nemo-embed` (Qwen3-Embedding-0.6B) : décision Sophie, pas de passage
+à bge-m3, qui exigerait une ré-indexation.
+
 ## Mise à jour 2026-10-02 — état réel et réglages « Models »
 
 Cette section **prime** sur le reste du document là où elle le contredit.

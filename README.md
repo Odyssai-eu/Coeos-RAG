@@ -10,7 +10,7 @@ direct aux instances LightRAG** pour les documents, la file de traitement et la 
 ce service ne garde que ce que LightRAG ne sait pas faire (changer de modèle ou d'endpoint,
 changer d'embedder, certifier un index, tenir le journal). Aucun proxy, donc rien à
 maintenir quand LightRAG change de version, et **rien dans le chemin des requêtes** de
-Companion.
+ceux qui interrogent les corpus.
 
 Cinq sections : Vue d'ensemble, Documents (injection de fichiers et de texte, file de
 traitement, liste filtrable), Requête, Modèles, Journal.

@@ -32,10 +32,30 @@ séparer est une montée de version des instances, à décider à part (stores J
 atomiques, alpha = 112 776 documents).
 
 **État mesuré le 2026-11-11.** alpha : 112 776 documents traités, 0 en échec, dernier
-traitement le 21 octobre. company : 156 documents dont 64 « en échec » qui sont tous des
-doublons refusés (« Content already exists »), dernier document neuf le 10 août. L'embedder
-des deux corpus reste `nemo-embed` (Qwen3-Embedding-0.6B) : décision Sophie, pas de passage
-à bge-m3, qui exigerait une ré-indexation.
+traitement le 21 octobre. L'embedder des deux corpus reste `nemo-embed`
+(Qwen3-Embedding-0.6B) : décision Sophie, pas de passage à bge-m3, qui exigerait une
+ré-indexation.
+
+**Companion n'existe plus** (Sophie, 2026-11-11). Tout ce qui, plus bas dans ce document,
+le décrit comme client ou consommateur de la mémoire (« Position dans la famille »,
+« Contrats avec Companion », le bloc RAG éphémère) est historique. Vérifié le même jour
+dans le journal de l'instance `:8767` : aucune requête entre le 22 octobre et nos propres
+tests.
+
+**Remise à zéro de `company` (`:8767`), 2026-11-11.** Le corpus contenait 92 documents
+dont 78 % de texte répété : 25 instantanés successifs du même wiki personnel (75 % du
+volume), 23 copies tronquées à 3 000 caractères, un graphe de 35 relations. Ce n'était
+pas une mémoire d'entreprise mais le wiki personnel compilé à l'époque de Companion.
+Décision Sophie : repartir de zéro. L'instance a été arrêtée, son répertoire mis de côté
+sans rien effacer (`…/lightrag/70767408-…-retired-2026-11-11`, plus l'archive
+`company-memory-backup-20261111-170038-before-dup-delete.tgz`), puis redémarrée sur un
+répertoire vide avec le même `.env`. Dans le registre, les ères et l'identité de l'espace
+vectoriel de ce corpus sont remises à zéro : un index vide n'a pas encore d'espace, il se
+certifie après la première alimentation. La suite est à la main de Sophie : reprise d'une
+partie du contenu depuis son vault après nettoyage, puis alimentation quotidienne. Règle
+à tenir pour l'émetteur : **un article = un document, dans sa dernière version** (LightRAG
+dédoublonne sur le contenu exact, donc chaque variante d'un même texte devient un
+document de plus).
 
 ## Mise à jour 2026-10-02 — état réel et réglages « Models »
 
@@ -48,7 +68,7 @@ corpus (working dir, port et service launchd propres) :
 | Corpus | Instance | Contenu |
 |---|---|---|
 | alpha | `:8766` (`eu.odyssai.lightrag-webui`) | corpus consolidé : 112 667 docs, 161 375 entités, 284 219 relations (merge des 4 shards, 2026-07-10) |
-| company | `:8767` (`eu.odyssai.lightrag-nemo`) | mémoire Nemo/Companion, 156 docs |
+| company | `:8767` (`eu.odyssai.lightrag-nemo`) | mémoire Nemo/Companion, 156 docs (remis à zéro le 2026-11-11, voir plus haut) |
 
 **Séparation OdyssAI.** OdyRAG et OdyssAI-X sont deux projets distincts. OdyRAG
 **consomme** l'API publique `/v1` d'OdyssAI-X comme n'importe quel client et ne la

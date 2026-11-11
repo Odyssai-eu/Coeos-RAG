@@ -27,18 +27,25 @@ class EngineClient:
         self._timeout = timeout
         self._ttl = ttl_s
         self._clock = clock
-        self._cache: Optional[tuple[float, list[EngineModel]]] = None
+        self._cache: dict[str, tuple[float, list[EngineModel]]] = {}
 
-    async def models(self) -> Optional[list[EngineModel]]:
-        """Models the engine can serve right now. None when the engine is not configured
-        or unreachable (callers must then refuse rather than guess)."""
-        if not self.base_url:
+    @property
+    def default_base(self) -> Optional[str]:
+        """OpenAI-compatible base of the engine configured for the service, or None."""
+        return f"{self.base_url}/v1" if self.base_url else None
+
+    async def models_at(self, base: Optional[str]) -> Optional[list[EngineModel]]:
+        """Models published at `base` (an OpenAI-compatible base URL such as http://host:8000/v1).
+        None when `base` is empty or unreachable (callers must then refuse rather than guess)."""
+        if not base:
             return None
+        base = base.rstrip("/")
         now = self._clock()
-        if self._cache and now - self._cache[0] < self._ttl:
-            return self._cache[1]
+        hit = self._cache.get(base)
+        if hit and now - hit[0] < self._ttl:
+            return hit[1]
         try:
-            r = await self._c.get(f"{self.base_url}/v1/models", timeout=self._timeout)
+            r = await self._c.get(f"{base}/models", timeout=self._timeout)
             r.raise_for_status()
             data = r.json()["data"]
         except (httpx.HTTPError, ValueError, KeyError, TypeError):
@@ -49,9 +56,15 @@ class EngineClient:
                 continue
             x = m.get("x_odyssai") if isinstance(m.get("x_odyssai"), dict) else {}
             models.append(EngineModel(id=m["id"], kind=x.get("kind"), ready=x.get("ready", True) is not False))
-        self._cache = (now, models)
+        self._cache[base] = (now, models)
         return models
 
-    async def ready_ids(self) -> Optional[set[str]]:
-        models = await self.models()
+    async def ready_ids_at(self, base: Optional[str]) -> Optional[set[str]]:
+        models = await self.models_at(base)
         return None if models is None else {m.id for m in models if m.ready}
+
+    async def models(self) -> Optional[list[EngineModel]]:
+        return await self.models_at(self.default_base)
+
+    async def ready_ids(self) -> Optional[set[str]]:
+        return await self.ready_ids_at(self.default_base)

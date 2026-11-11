@@ -6,7 +6,7 @@ import pytest
 from odyrag import embedder as emb
 from odyrag import plist
 from odyrag.controller import Busy, ChangeError
-from tests.fakes import build, fake_vec, EMBEDDER
+from tests.fakes import build, fake_vec, EMBEDDER, ENGINE, ENGINE2
 
 import base64, struct, zlib
 
@@ -329,3 +329,77 @@ async def test_overview_survives_engine_instance_and_embedder_being_down(tmp_pat
     assert c["instance"]["up"] is False and c["instance"]["loaded"] is False
     assert c["llm"]["ready"] is None and c["llm"]["in_sync"] is None
     assert c["embedder"]["alive"] is False and c["embedder"]["same_space"] is None
+
+
+# ── LLM endpoint: a change of LLM_BINDING_HOST goes through the same apply cycle ──
+
+async def test_apply_llm_moves_to_another_endpoint(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    logs, log = collector()
+    res = await ctl.apply_llm("alpha", "moved-model", log, endpoint=f"{ENGINE2}/v1")
+    assert res["changed"]
+    assert plist_env(tmp_path)["LLM_BINDING_HOST"] == f"{ENGINE2}/v1"
+    assert plist_env(tmp_path)["LLM_MODEL"] == "moved-model"
+    assert reg.corpus("alpha").llm_endpoint == f"{ENGINE2}/v1"
+    assert res["live"]["llm_binding_host"] == f"{ENGINE2}/v1"
+
+
+async def test_apply_llm_endpoint_only_change_keeps_the_model(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    _, log = collector()
+    res = await ctl.apply_llm("alpha", "old-model", log, endpoint=f"{ENGINE2}/v1")
+    assert res["changed"]
+    assert plist_env(tmp_path)["LLM_MODEL"] == "old-model"
+    assert plist_env(tmp_path)["LLM_BINDING_HOST"] == f"{ENGINE2}/v1"
+
+
+async def test_apply_llm_checks_readiness_on_the_new_endpoint(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    _, log = collector()
+    # new-model is only published by ENGINE, not by the new endpoint
+    with pytest.raises(ChangeError, match="not loaded"):
+        await ctl.apply_llm("alpha", "new-model", log, endpoint=f"{ENGINE2}/v1")
+    assert "bootout" not in world.calls
+
+
+async def test_apply_llm_refuses_a_public_endpoint(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    _, log = collector()
+    with pytest.raises(ChangeError) as e:
+        await ctl.apply_llm("alpha", "old-model", log, endpoint="http://8.8.8.8:1/v1")
+    assert e.value.status == 422
+    assert "bootout" not in world.calls
+
+
+async def test_endpoint_change_is_rolled_back_with_the_model(tmp_path):
+    ctl, world, clock, reg, _ = build(tmp_path)
+    _, log = collector()
+    world.fail_bootstrap = 1  # the new config fails to load, the rollback load succeeds
+    with pytest.raises(ChangeError) as e:
+        await ctl.apply_llm("alpha", "moved-model", log, endpoint=f"{ENGINE2}/v1")
+    assert e.value.rolled_back is True
+    assert plist_env(tmp_path)["LLM_BINDING_HOST"] == f"{ENGINE}/v1"
+    assert plist_env(tmp_path)["LLM_MODEL"] == "old-model"
+
+
+async def test_overview_reports_the_engine_of_each_corpus(tmp_path):
+    ctl, world, *_ = build(tmp_path)
+    c = (await ctl.overview())["corpora"][0]
+    assert c["engine"] == {"endpoint": {"configured": None, "live": f"{ENGINE}/v1", "effective": f"{ENGINE}/v1"},
+                           "reachable": True, "ready_models": ["new-model", "old-model"]}
+    assert c["instance"]["public_url"] is None
+    assert c["instance"]["version"] == "1.4.16"
+
+
+async def test_probe_endpoint_lists_models_and_refuses_public_hosts(tmp_path):
+    ctl, world, *_ = build(tmp_path)
+    res = await ctl.probe_endpoint(f"{ENGINE2}/v1/")
+    assert res["reachable"] is True
+    assert {m["id"] for m in res["models"]} == {"old-model", "moved-model"}
+    assert res["url"] == f"{ENGINE2}/v1"
+    world.engine2_models = None  # ttl_s=0 in build(): no cache to hide the outage
+    res = await ctl.probe_endpoint(f"{ENGINE2}/v1")
+    assert res["reachable"] is False and res["models"] == []
+    with pytest.raises(ChangeError) as e:
+        await ctl.probe_endpoint("http://8.8.8.8:1/v1")
+    assert e.value.status == 422

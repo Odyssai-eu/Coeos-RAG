@@ -24,6 +24,7 @@ from odyrag.registry import (
 INSTANCE = "http://127.0.0.1:8766"
 EMBEDDER = "http://127.0.0.1:8765"
 ENGINE = "http://127.0.0.1:8000"
+ENGINE2 = "http://127.0.0.1:9000"
 LABEL = "eu.test.lightrag"
 
 
@@ -52,7 +53,7 @@ def write_plist(path: Path, **env) -> Path:
         "Label": LABEL, "KeepAlive": True, "RunAtLoad": True, "WorkingDirectory": "/w",
         "ProgramArguments": ["/bin/python", "-m", "lightrag", "--port", "8766"],
         "EnvironmentVariables": {
-            "LLM_MODEL": "old-model", "LLM_BINDING_HOST": "http://localhost:8000/v1",
+            "LLM_MODEL": "old-model", "LLM_BINDING_HOST": f"{ENGINE}/v1",
             "EMBEDDING_BINDING_HOST": EMBEDDER, "EMBEDDING_MODEL": "emb", "EMBEDDING_DIM": "8", **env,
         },
     }
@@ -96,6 +97,10 @@ class FakeWorld:
             {"id": "new-model", "x_odyssai": {"ready": True, "kind": "mlx-distributed"}},
             {"id": "unloaded-model", "x_odyssai": {"ready": False, "kind": "replica"}},
         ]
+        self.engine2_models: list[dict] | None = [
+            {"id": "old-model", "x_odyssai": {"ready": True}},
+            {"id": "moved-model", "x_odyssai": {"ready": True}},
+        ]
 
     def _read_env(self) -> dict:
         with open(self.plist_path, "rb") as f:
@@ -136,6 +141,12 @@ class FakeWorld:
             return self._embedder(request)
         if origin == ENGINE:
             return self._engine(url.path)
+        if origin == ENGINE2:
+            if self.engine2_models is None:
+                raise httpx.ConnectError("engine2 down")
+            if url.path == "/v1/models":
+                return httpx.Response(200, json={"data": self.engine2_models})
+            return httpx.Response(404)
         raise httpx.ConnectError(f"no route to {origin}")
 
     def _instance(self, path: str) -> httpx.Response:
@@ -146,8 +157,9 @@ class FakeWorld:
             raise httpx.ConnectError("still starting")
         env = {**self.env, **self.force_live_env}
         if path == "/health":
-            return httpx.Response(200, json={"status": "healthy", "configuration": {
+            return httpx.Response(200, json={"status": "healthy", "core_version": "1.4.16", "configuration": {
                 "llm_model": env.get("LLM_MODEL"),
+                "llm_binding_host": env.get("LLM_BINDING_HOST"),
                 "embedding_binding_host": env.get("EMBEDDING_BINDING_HOST"),
                 "embedding_model": env.get("EMBEDDING_MODEL"),
             }})

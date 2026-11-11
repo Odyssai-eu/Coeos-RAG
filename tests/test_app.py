@@ -6,7 +6,7 @@ import pytest
 from odyrag.app import create_app
 from odyrag.launchd import Launchd
 from odyrag.registry import Registry, RegistryModel
-from tests.fakes import FakeWorld, make_corpus, make_settings, write_plist
+from tests.fakes import ENGINE2, FakeWorld, make_corpus, make_settings, write_plist
 
 AUTH = {"Authorization": "Bearer secret"}
 
@@ -41,7 +41,8 @@ async def test_health_and_dashboard_are_served(env):
     h = (await c.get("/health")).json()
     assert h["status"] == "ok" and h["mutations_enabled"] is True
     page = await c.get("/")
-    assert page.status_code == 200 and "OdyRAG" in page.text and "/api/overview" in page.text
+    assert page.status_code == 200 and "Coeos-Rag" in page.text and "/static/app.js?v=0.2.0" in page.text
+    assert (await c.get("/static/app.js")).status_code == 200
 
 
 async def test_overview_endpoint(env):
@@ -123,3 +124,20 @@ async def test_embedder_and_start_endpoints_exist(env):
     assert job["status"] == "failed" and "public" in job["error"]
     r = await c.post("/api/corpora/alpha/start", headers=AUTH)
     assert (await wait_job(c, r.json()["job_id"]))["result"] == {"started": False, "note": "already loaded"}
+
+
+async def test_llm_change_can_move_the_endpoint(env):
+    c, world, settings, reg, _ = env
+    r = await c.post("/api/corpora/alpha/llm", json={"model": "moved-model", "endpoint": f"{ENGINE2}/v1"}, headers=AUTH)
+    assert r.status_code == 202
+    job = await wait_job(c, r.json()["job_id"])
+    assert job["status"] == "done" and job["result"]["live"]["llm_binding_host"] == f"{ENGINE2}/v1"
+
+
+async def test_endpoint_probe_needs_the_token_and_lists_models(env):
+    c, *_ = env
+    assert (await c.post("/api/endpoint/models", json={"url": f"{ENGINE2}/v1"})).status_code == 401
+    r = await c.post("/api/endpoint/models", json={"url": f"{ENGINE2}/v1"}, headers=AUTH)
+    assert r.status_code == 200 and "moved-model" in {m["id"] for m in r.json()["models"]}
+    r = await c.post("/api/endpoint/models", json={"url": "http://8.8.8.8:1/v1"}, headers=AUTH)
+    assert r.status_code == 422

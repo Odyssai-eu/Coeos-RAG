@@ -48,6 +48,12 @@ def test_two_changes_in_same_second_keep_both_backups(tmp_path):
     assert b1 != b2 and P.read_env(b1)["LLM_MODEL"] == "old" and P.read_env(b2)["LLM_MODEL"] == "m1"
 
 
+def test_llm_binding_host_is_mutable(tmp_path):
+    p = write_plist(tmp_path / "a.plist")
+    P.apply_env(p, {"LLM_BINDING_HOST": "http://h2/v1"})
+    assert P.read_env(p)["LLM_BINDING_HOST"] == "http://h2/v1"
+
+
 def test_restore_puts_back_original(tmp_path):
     p = write_plist(tmp_path / "a.plist")
     bak = P.apply_env(p, {"LLM_MODEL": "new"})

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Coeos-Rag</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect x='3' y='3' width='114' height='114' rx='26' fill='%2358badd'/%3E%3Crect x='55' y='55' width='10' height='10' rx='2' fill='%23214c6f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/app.css?v=__VERSION__">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/overview" aria-label="Coeos-Rag, vue d'ensemble">
+    <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="30" height="30" role="img" aria-label="Coeos">
+      <rect x="3" y="3" width="114" height="114" rx="26" fill="#58badd"/>
+      <rect x="3" y="3" width="114" height="114" rx="26" fill="none" stroke="#32353a" stroke-width="3"/>
+      <g fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M51 18 H18 V102 H51"/>
+        <path d="M69 18 H102 V102 H69"/>
+        <path d="M29 51 V29 H91 V51"/>
+        <path d="M29 69 V91 H91 V69"/>
+        <path d="M53 40 H40 V80 H53"/>
+        <path d="M67 40 H80 V80 H67"/>
+      </g>
+      <rect x="55" y="55" width="10" height="10" rx="2" fill="#214c6f"/>
+    </svg>
+    <span class="brand-name">Coeos-Rag</span>
+  </a>
+  <div class="seg" id="corpus-switch" role="tablist" aria-label="Corpus"></div>
+  <div class="topbar-right">
+    <span class="muted small" id="updated"></span>
+    <button class="btn ghost" data-action="token" id="token-btn">Jeton</button>
+  </div>
+</header>
+<div class="shell">
+  <nav class="nav" id="nav" aria-label="Sections"></nav>
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+<dialog id="dialog" class="dialog"></dialog>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script src="/static/app.js?v=__VERSION__"></script>
+</body>
+</html>

@@ -15,7 +15,7 @@ from typing import Mapping, Optional
 
 # The only keys the control plane may change in an instance plist.
 MUTABLE_ENV_KEYS = frozenset(
-    {"LLM_MODEL", "EMBEDDING_BINDING_HOST", "EMBEDDING_MODEL", "EMBEDDING_DIM"}
+    {"LLM_MODEL", "LLM_BINDING_HOST", "EMBEDDING_BINDING_HOST", "EMBEDDING_MODEL", "EMBEDDING_DIM"}
 )
 
 

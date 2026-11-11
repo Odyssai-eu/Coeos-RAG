@@ -16,6 +16,7 @@ from typing import Awaitable, Callable, Optional
 
 import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -27,12 +28,18 @@ from .jobs import JobManager
 from .launchd import Launchd
 from .registry import Registry
 
-DASHBOARD = Path(__file__).parent / "static" / "dashboard.html"
+STATIC = Path(__file__).parent / "static"
+INDEX = STATIC / "index.html"
 
 
 class LlmChange(BaseModel):
     model: str
     force: bool = False
+    endpoint: Optional[str] = None
+
+
+class EndpointProbe(BaseModel):
+    url: str
 
 
 class EmbedderChange(BaseModel):
@@ -63,7 +70,8 @@ def create_app(
         if http is None:
             await client.aclose()
 
-    app = FastAPI(title="OdyRAG control plane", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="Coeos-Rag control plane", version=__version__, lifespan=lifespan)
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     def controller() -> Controller:
         return state["controller"]
@@ -107,8 +115,9 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     async def dashboard() -> HTMLResponse:
-        # Read fresh on each request: a UI-only change needs no restart.
-        return HTMLResponse(DASHBOARD.read_text(encoding="utf-8"))
+        # Read fresh on each request: a UI-only change needs no restart. The version stamps
+        # the asset URLs so a browser never runs a stale script after a deploy.
+        return HTMLResponse(INDEX.read_text(encoding="utf-8").replace("__VERSION__", __version__))
 
     @app.get("/api/overview")
     async def overview() -> dict:
@@ -132,7 +141,8 @@ def create_app(
     # ── mutations (admin token required) ───────────────────────────────────
     @app.post("/api/corpora/{corpus_id}/llm", status_code=202, dependencies=[Depends(require_admin)])
     async def change_llm(corpus_id: str, body: LlmChange) -> dict:
-        return launch(corpus_id, "llm", lambda log: controller().apply_llm(corpus_id, body.model, log, force=body.force))
+        return launch(corpus_id, "llm", lambda log: controller().apply_llm(
+            corpus_id, body.model, log, force=body.force, endpoint=body.endpoint))
 
     @app.post("/api/corpora/{corpus_id}/embedder", status_code=202, dependencies=[Depends(require_admin)])
     async def change_embedder(corpus_id: str, body: EmbedderChange) -> dict:
@@ -145,5 +155,12 @@ def create_app(
     @app.post("/api/corpora/{corpus_id}/start", status_code=202, dependencies=[Depends(require_admin)])
     async def start(corpus_id: str) -> dict:
         return launch(corpus_id, "start", lambda log: controller().start(corpus_id, log))
+
+    @app.post("/api/endpoint/models", dependencies=[Depends(require_admin)])
+    async def endpoint_models(body: EndpointProbe) -> dict:
+        try:
+            return await controller().probe_endpoint(body.url)
+        except ChangeError as e:
+            raise HTTPException(e.status, e.message) from None
 
     return app

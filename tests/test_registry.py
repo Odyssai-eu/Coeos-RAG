@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -76,3 +77,9 @@ def test_file_is_valid_json_with_version(tmp_path):
     reg.save(RegistryModel(corpora={"alpha": make_corpus()}))
     data = json.loads((tmp_path / "registry.json").read_text())
     assert data["version"] == 1 and "alpha" in data["corpora"]
+
+
+def test_prod_registry_loads_without_the_new_optional_fields():
+    model = RegistryModel.model_validate_json(Path("deploy/registry.prod.json").read_text())
+    assert model.corpora["alpha"].llm_endpoint is None
+    assert model.corpora["alpha"].instance.public_url is None

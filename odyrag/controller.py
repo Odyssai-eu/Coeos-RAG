@@ -85,6 +85,12 @@ class Controller:
     def _lr(self, corpus: Corpus) -> LightRagClient:
         return LightRagClient(self.http, corpus.instance.url, self.s.http_timeout_s)
 
+    def _llm_endpoint(self, corpus: Corpus, cfg: dict) -> Optional[str]:
+        """The endpoint the instance calls for its LLM: what it reports live, else what the
+        registry last applied, else the engine configured for the service."""
+        ep = cfg.get("llm_binding_host") or corpus.llm_endpoint or self.engine.default_base
+        return ep.rstrip("/") if ep else None
+
     def lock_for(self, corpus_id: str) -> asyncio.Lock:
         return self._locks.setdefault(corpus_id, asyncio.Lock())
 
@@ -173,7 +179,7 @@ class Controller:
             return {
                 "changed": True, "corpus": corpus_id, "applied": updates, "backup": str(bak),
                 "took_s": round(self._clock() - t0, 1),
-                "live": {k: cfg.get(k) for k in ("llm_model", "embedding_binding_host", "embedding_model")},
+                "live": {k: cfg.get(k) for k in ("llm_model", "llm_binding_host", "embedding_binding_host", "embedding_model")},
             }
 
     async def _restart(self, corpus: Corpus, inst: LightRagClient, log: Log) -> None:
@@ -208,32 +214,55 @@ class Controller:
             return False
 
     # ── public operations ──────────────────────────────────────────────────
-    async def apply_llm(self, corpus_id: str, model: str, log: Log, *, force: bool = False) -> dict:
+    async def apply_llm(self, corpus_id: str, model: str, log: Log, *, force: bool = False,
+                        endpoint: Optional[str] = None) -> dict:
         corpus = self._corpus(corpus_id)
         model = (model or "").strip()
         if not model:
             raise ChangeError("empty model", status=422)
-        ready = await self.engine.ready_ids()
+        endpoint = (endpoint or "").strip().rstrip("/") or None
+        if endpoint is not None:
+            try:
+                emb.validate_embedder_url(endpoint, what="LLM endpoint")
+            except ValueError as e:
+                raise ChangeError(str(e), status=422) from e
+        live = await self._lr(corpus).health()
+        cfg = (live or {}).get("configuration") or {}
+        live_llm = cfg.get("llm_model")
+        live_ep = (cfg.get("llm_binding_host") or "").rstrip("/") or None
+        target_ep = endpoint or self._llm_endpoint(corpus, cfg)
+        ready = await self.engine.ready_ids_at(target_ep)
         if not force:
             if ready is None:
                 raise ChangeError("cannot verify that the model is loaded (engine unreachable or not configured)")
             if model not in ready:
                 raise ChangeError(f"model {model!r} is not loaded on the engine")
-        live = await self._lr(corpus).health()
-        live_llm = ((live or {}).get("configuration") or {}).get("llm_model")
-        if live_llm == model and corpus.llm == model:
+        endpoint_changes = endpoint is not None and endpoint != live_ep
+        if live_llm == model and corpus.llm == model and not endpoint_changes:
             return {"changed": False, "corpus": corpus_id, "note": "already applied"}
+
+        updates = {"LLM_MODEL": model}
+        if endpoint_changes:
+            updates["LLM_BINDING_HOST"] = endpoint
 
         def commit(c: Corpus, now: str) -> None:
             c.llm = model
-            open_era(c, model, now, "OdyRAG settings")
+            if target_ep:
+                c.llm_endpoint = target_ep
+            open_era(c, model, now, "Coeos-Rag settings")
 
-        return await self._apply(
-            corpus_id, {"LLM_MODEL": model},
-            check=lambda cfg: cfg.get("llm_model") == model,
-            describe_live=lambda cfg: f"llm_model={cfg.get('llm_model')!r}",
-            commit=commit, log=log,
-        )
+        def check(c: dict) -> bool:
+            if c.get("llm_model") != model:
+                return False
+            return (not endpoint_changes) or (c.get("llm_binding_host") or "").rstrip("/") == endpoint
+
+        def describe(c: dict) -> str:
+            text = f"llm_model={c.get('llm_model')!r}"
+            if endpoint_changes:
+                text += f", llm_binding_host={c.get('llm_binding_host')!r}"
+            return text
+
+        return await self._apply(corpus_id, updates, check=check, describe_live=describe, commit=commit, log=log)
 
     async def apply_embedder(self, corpus_id: str, url: str, model: str, log: Log) -> dict:
         corpus = self._corpus(corpus_id)
@@ -335,6 +364,17 @@ class Controller:
         log("healthy", True, "")
         return {"started": True}
 
+    async def probe_endpoint(self, url: str) -> dict:
+        """List the models an OpenAI-compatible endpoint publishes (read-only)."""
+        url = (url or "").strip().rstrip("/")
+        try:
+            emb.validate_embedder_url(url, what="LLM endpoint")
+        except ValueError as e:
+            raise ChangeError(str(e), status=422) from e
+        models = await self.engine.models_at(url)
+        return {"url": url, "reachable": models is not None,
+                "models": [{"id": m.id, "ready": m.ready} for m in (models or [])]}
+
     # ── read model for the dashboard ───────────────────────────────────────
     async def _era_counts(self, corpus: Corpus) -> Optional[list[int]]:
         path = Path(corpus.instance.workdir).expanduser() / "kv_store_doc_status.json"
@@ -354,7 +394,7 @@ class Controller:
         self._era_cache[corpus.instance.workdir] = (key, counts)
         return counts
 
-    async def _corpus_view(self, corpus_id: str, corpus: Corpus, ready: Optional[set[str]]) -> dict:
+    async def _corpus_view(self, corpus_id: str, corpus: Corpus) -> dict:
         inst = self._lr(corpus)
         health, busy, counts, loaded, probe, era_counts = await asyncio.gather(
             inst.health(), inst.busy(), inst.counts(),
@@ -363,6 +403,8 @@ class Controller:
             self._era_counts(corpus),
         )
         cfg = (health or {}).get("configuration") or {}
+        ep = self._llm_endpoint(corpus, cfg)
+        ready = await self.engine.ready_ids_at(ep)
         ident = corpus.indexed_with.embedder
         cos: Optional[float] = None
         if probe.alive and probe.vec and ident.golden_vec:
@@ -377,13 +419,21 @@ class Controller:
         return {
             "id": corpus_id, "label": corpus.label,
             "instance": {
-                "url": corpus.instance.url, "launchd_label": corpus.instance.launchd_label,
+                "url": corpus.instance.url, "public_url": corpus.instance.public_url,
+                "launchd_label": corpus.instance.launchd_label,
                 "up": health is not None, "loaded": loaded, "busy": busy, "counts": counts,
+                "version": (health or {}).get("core_version"),
             },
             "llm": {
                 "configured": corpus.llm, "live": live_llm,
                 "in_sync": live_llm == corpus.llm if live_llm else None,
                 "ready": None if ready is None else (corpus.llm in ready),
+            },
+            "engine": {
+                "endpoint": {"configured": corpus.llm_endpoint,
+                             "live": (cfg.get("llm_binding_host") or None), "effective": ep},
+                "reachable": ready is not None,
+                "ready_models": sorted(ready) if ready is not None else None,
             },
             "embedder": {
                 "configured": corpus.embedder.model_dump(),
@@ -406,7 +456,7 @@ class Controller:
         reg = self.registry.load()
         models = await self.engine.models()
         ready = None if models is None else {m.id for m in models if m.ready}
-        views = await asyncio.gather(*[self._corpus_view(cid, c, ready) for cid, c in reg.corpora.items()])
+        views = await asyncio.gather(*[self._corpus_view(cid, c) for cid, c in reg.corpora.items()])
         return {
             "engine": {
                 "configured": bool(self.engine.base_url), "reachable": models is not None,

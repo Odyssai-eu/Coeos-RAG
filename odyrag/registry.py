@@ -56,6 +56,7 @@ class Instance(BaseModel):
     launchd_label: str
     plist: str
     workdir: str  # directory holding the stores (vdb_*.json, kv_store_*.json)
+    public_url: Optional[str] = None  # URL of the instance as a browser reaches it; None = derive from `url`
 
 
 class EmbedderConfig(BaseModel):
@@ -68,6 +69,7 @@ class Corpus(BaseModel):
     label: str
     instance: Instance
     llm: str  # configured LLM_MODEL; the applied value is read live from the instance
+    llm_endpoint: Optional[str] = None  # LLM_BINDING_HOST last applied (OpenAI-compatible base, usually ends in /v1)
     embedder: EmbedderConfig
     indexed_with: IndexedWith
 

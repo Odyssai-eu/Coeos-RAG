@@ -41,21 +41,21 @@ def health_url(binding_host: str) -> str:
     return base + "/health"
 
 
-def validate_embedder_url(url: str, resolver: Callable = socket.getaddrinfo) -> None:
+def validate_embedder_url(url: str, resolver: Callable = socket.getaddrinfo, what: str = "embedder") -> None:
     """Document text goes through this URL: only http(s) to private/loopback hosts."""
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise ValueError("embedder URL must be http(s) with a host")
+        raise ValueError(f"{what} URL must be http(s) with a host")
     try:
         infos = resolver(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
     except OSError as e:
-        raise ValueError(f"embedder host does not resolve: {e}") from e
+        raise ValueError(f"{what} host does not resolve: {e}") from e
     addrs = {ipaddress.ip_address(i[4][0].split("%")[0]) for i in infos}
     if not addrs:
-        raise ValueError("embedder host does not resolve")
+        raise ValueError(f"{what} host does not resolve")
     for a in addrs:
         if not (a.is_private or a.is_loopback or a.is_link_local):
-            raise ValueError(f"embedder host resolves to a public address ({a}); refused")
+            raise ValueError(f"{what} host resolves to a public address ({a}); refused")
 
 
 def encode_vec(vec: Sequence[float]) -> str:

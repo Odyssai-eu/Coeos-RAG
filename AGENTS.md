@@ -6,7 +6,7 @@ Coeos-RAG sans le contexte de ceux qui l'ont construit. L'usage est décrit dans
 
 ## Ce que tu installes
 
-Trois pièces, sur **une même machine macOS** (l'hôte RAG) :
+Trois pièces, sur **une même machine** (l'hôte RAG) :
 
 | Pièce | Rôle | Forme |
 |---|---|---|
@@ -19,6 +19,24 @@ joignable depuis l'hôte. Coeos-RAG ne fait que le lire.
 
 Rien ne tourne en container : Coeos-RAG lit et écrit les plists des instances et appelle
 `launchctl`.
+
+## Plateformes
+
+| Pièce | macOS | Linux | Windows |
+|---|---|---|---|
+| Endpoints LLM et embeddings | oui | oui | oui |
+| LightRAG lui-même | oui | oui | oui |
+| Navigateur de l'opérateur | oui | oui | oui |
+| Coeos-RAG (ce dépôt) | oui | **pas encore** | **pas encore** |
+
+Coeos-RAG dépend aujourd'hui de launchd : il change un réglage en éditant le plist d'une
+instance et en la redémarrant avec `launchctl`, et il interroge launchd pour savoir si une
+instance est chargée. Sans `launchctl`, `/api/overview` répond 500 et l'interface ne
+s'affiche pas ; sous Windows le service ne démarre même pas (`os.getuid`). Comme il doit
+tourner sur la machine des instances qu'il pilote, **l'hôte RAG est donc macOS** tant que
+ce point n'est pas levé. Le code concerné tient en deux modules : `coeos_rag/launchd.py`
+(gestionnaire de services) et `coeos_rag/plist.py` (fichier de configuration d'une
+instance) ; `deploy/deploy.sh` suppose aussi macOS.
 
 ## Règles à ne jamais enfreindre
 
@@ -41,7 +59,8 @@ Rien ne tourne en container : Coeos-RAG lit et écrit les plists des instances e
 ## Prérequis
 
 Sur l'hôte RAG :
-- macOS, une session utilisateur ouverte (les LaunchAgents vivent dans `gui/<uid>`) ;
+- macOS (voir « Plateformes »), une session utilisateur ouverte : les LaunchAgents vivent
+  dans `gui/<uid>` ;
 - `/opt/homebrew/bin/python3.11` (le script de déploiement crée le venv avec) ;
 - `curl`, `rsync`, `openssl` ;
 - accès SSH par clé depuis le poste qui déploie.

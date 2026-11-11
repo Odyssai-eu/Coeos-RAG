@@ -16,6 +16,9 @@ ceux qui interrogent les corpus.
 Cinq sections : Vue d'ensemble, Documents (injection de fichiers et de texte, file de
 traitement, liste filtrable), Requête, Modèles, Journal.
 
+**macOS uniquement** : la console pilote les instances par launchd. Sous Linux et Windows,
+utilise LightRAG directement (son interface web et son API).
+
 Installation, mise à jour et exploitation : [AGENTS.md](AGENTS.md).
 
 ## Ce que ça fait — réglages « Modèles » par corpus

@@ -3,7 +3,7 @@ import stat
 
 import pytest
 
-from odyrag import plist as P
+from coeos_rag import plist as P
 
 
 def write_plist(path, **env):

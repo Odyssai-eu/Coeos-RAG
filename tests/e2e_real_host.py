@@ -31,12 +31,12 @@ from pathlib import Path
 
 import httpx
 
-from odyrag.config import Settings
-from odyrag.controller import Busy, ChangeError, Controller
-from odyrag.engine import EngineClient
-from odyrag.launchd import Launchd
-from odyrag.lightrag import LightRagClient
-from odyrag.registry import (
+from coeos_rag.config import Settings
+from coeos_rag.controller import Busy, ChangeError, Controller
+from coeos_rag.engine import EngineClient
+from coeos_rag.launchd import Launchd
+from coeos_rag.lightrag import LightRagClient
+from coeos_rag.registry import (
     Corpus, EmbedderConfig, EmbedderIdentity, IndexedWith, Instance, Registry, RegistryModel,
 )
 

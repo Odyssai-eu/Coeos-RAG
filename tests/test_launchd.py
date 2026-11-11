@@ -1,6 +1,6 @@
 import subprocess
 
-from odyrag.launchd import Launchd
+from coeos_rag.launchd import Launchd
 
 
 def fake_runner(rc=0, out="", err=""):

@@ -4,12 +4,13 @@
 > du drain du tier company). Ce document est la référence : toute issue du repo
 > s'y rattache. Si une décision change, on édite ICI d'abord.
 
-## Mise à jour 2026-11-11 — Coeos-Rag, la console complète
+## Mise à jour 2026-11-11 — Coeos-RAG, la console complète
 
 Cette section **prime** sur tout le reste du document.
 
-**Nom.** Le produit s'appelle Coeos-Rag. Seul le visible change (titre, interface, logo) ;
-le package `odyrag`, les variables `ODYRAG_*`, `~/.odyrag` et le label launchd restent.
+**Nom.** Le produit s'appelle Coeos-RAG. Seul le visible change (titre, interface, logo) ;
+les variables `ODYRAG_*`, `~/.odyrag` et le label launchd restent. Le dossier du package,
+lui, est renommé `coeos_rag` (2026-11-11) : c'était le nom le plus visible du dépôt.
 
 **Forme (décision Sophie, 2026-11-11, sur proposition du panel).** Une seule interface,
 servie par ce service. Le navigateur appelle **directement** les instances LightRAG pour
@@ -70,7 +71,7 @@ corpus (working dir, port et service launchd propres) :
 | alpha | `:8766` (`eu.odyssai.lightrag-webui`) | corpus consolidé : 112 667 docs, 161 375 entités, 284 219 relations (merge des 4 shards, 2026-07-10) |
 | company | `:8767` (`eu.odyssai.lightrag-nemo`) | mémoire Nemo/Companion, 156 docs (remis à zéro le 2026-11-11, voir plus haut) |
 
-**Séparation OdyssAI.** OdyRAG et OdyssAI-X sont deux projets distincts. OdyRAG
+**Séparation OdyssAI.** Coeos-RAG et OdyssAI-X sont deux projets distincts. Coeos-RAG
 **consomme** l'API publique `/v1` d'OdyssAI-X comme n'importe quel client et ne la
 modifie jamais (décision Sophie, 2026-10-02 : « tu ne peux rien modifier sur odyssai »).
 

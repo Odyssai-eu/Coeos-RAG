@@ -1,4 +1,4 @@
-"""HTTP API and dashboard of the OdyRAG control plane.
+"""HTTP API and dashboard of the Coeos-RAG control plane.
 
 Reads are open on the LAN. Every mutation needs the admin bearer token, and stays
 disabled altogether until a token is configured. Mutations run as background jobs
@@ -70,7 +70,7 @@ def create_app(
         if http is None:
             await client.aclose()
 
-    app = FastAPI(title="Coeos-Rag control plane", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="Coeos-RAG control plane", version=__version__, lifespan=lifespan)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     def controller() -> Controller:

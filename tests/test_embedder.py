@@ -7,7 +7,7 @@ import zlib
 import httpx
 import pytest
 
-from odyrag import embedder as E
+from coeos_rag import embedder as E
 
 
 def fake_vec(text: str, dim: int = 8, salt: str = "") -> list[float]:

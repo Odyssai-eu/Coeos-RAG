@@ -13,11 +13,11 @@ from pathlib import Path
 
 import httpx
 
-from odyrag import embedder as emb
-from odyrag.config import Settings
-from odyrag.engine import EngineClient
-from odyrag.launchd import Launchd
-from odyrag.registry import (
+from coeos_rag import embedder as emb
+from coeos_rag.config import Settings
+from coeos_rag.engine import EngineClient
+from coeos_rag.launchd import Launchd
+from coeos_rag.registry import (
     Corpus, EmbedderConfig, EmbedderIdentity, IndexedWith, Instance, Registry, RegistryModel,
 )
 
@@ -214,7 +214,7 @@ def make_corpus(plist_path: Path, workdir: Path, *, certified: bool = True) -> C
 
 def build(tmp_path: Path, *, certified: bool = True):
     """Returns (controller, world, clock, registry, http_client)."""
-    from odyrag.controller import Controller
+    from coeos_rag.controller import Controller
 
     plist_path = write_plist(tmp_path / "lightrag.plist")
     workdir = tmp_path / "workdir"

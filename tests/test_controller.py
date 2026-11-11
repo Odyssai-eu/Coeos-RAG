@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from odyrag import embedder as emb
-from odyrag import plist
-from odyrag.controller import Busy, ChangeError
+from coeos_rag import embedder as emb
+from coeos_rag import plist
+from coeos_rag.controller import Busy, ChangeError
 from tests.fakes import build, fake_vec, EMBEDDER, ENGINE, ENGINE2
 
 import base64, struct, zlib
@@ -297,7 +297,7 @@ async def test_overview_reports_live_state_drift_and_embedder_identity(tmp_path)
     (tmp_path / "workdir" / "kv_store_doc_status.json").write_text(json.dumps({
         "d1": {"created_at": "2026-06-21T10:00:00+00:00"}, "d2": {"created_at": "2026-09-25T10:00:00+00:00"}}))
     with reg.txn() as m:
-        from odyrag.registry import Era
+        from coeos_rag.registry import Era
         m.corpora["alpha"].indexed_with.llm_eras = [
             Era(model="a", start="2026-06-01", end="2026-09-01", source="env backups"),
             Era(model="old-model", start="2026-09-01", end=None, source="settings")]

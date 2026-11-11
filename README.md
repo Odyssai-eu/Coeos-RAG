@@ -1,9 +1,10 @@
-# Coeos-Rag
+# Coeos-RAG
 
 > La console de gestion du RAG de la stack Coeos : corpus, documents, requêtes et
 > modèles. Construit sur [LightRAG](https://github.com/HKUDS/LightRAG) (HKUDS, MIT License).
 > Anciennement OdyRAG : le nom du produit a changé le 2026-11-11, les identifiants
-> techniques (`odyrag`, `ODYRAG_*`, `~/.odyrag`, `eu.odyssai.odyrag`) restent.
+> techniques (`ODYRAG_*`, `~/.odyrag`, `eu.odyssai.odyrag`) restent. Le package Python
+> s'appelle `coeos_rag`.
 
 Une seule interface, servie par ce service, avec une règle : **le navigateur parle en
 direct aux instances LightRAG** pour les documents, la file de traitement et la requête ;
@@ -15,13 +16,8 @@ ceux qui interrogent les corpus.
 Cinq sections : Vue d'ensemble, Documents (injection de fichiers et de texte, file de
 traitement, liste filtrable), Requête, Modèles, Journal.
 
-L'ancien cockpit (`odyrag.html`, servi par OdyssAI-X) est décrit dans
-[docs/cockpit-2026-06-21.md](docs/cockpit-2026-06-21.md), conservé pour mémoire : ses
-sections « Instances » et « Ingestion » sont périmées (les 4 shards ont été fusionnés dans
-alpha le 2026-07-10, Qdrant est abandonné).
-
-Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
-(la section « Mise à jour 2026-10-02 » prime là où elle contredit le reste).
+Installation, mise à jour et exploitation : [AGENTS.md](AGENTS.md). Décisions et
+histoire : [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Ce que ça fait — réglages « Modèles » par corpus
 
@@ -57,7 +53,7 @@ Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
   leurs actions sur les documents ne passent pas par le jeton de ce service (LightRAG a sa
   propre authentification, aujourd'hui désactivée sur les deux instances).
 - Pas de suppression de documents, pas d'édition du graphe, pas de vue 3D.
-- Aucune écriture sur le moteur OdyssAI-X : c'est un projet distinct, OdyRAG n'en est
+- Aucune écriture sur le moteur OdyssAI-X : c'est un projet distinct, Coeos-RAG n'en est
   qu'un client public (`GET /v1/models`).
 - Pas de ré-indexation, pas de changement d'espace vectoriel.
 
@@ -179,6 +175,6 @@ suppression vérifiée de documents, graphe, veille.
 
 ## Licensing
 
-Coeos-Rag is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
+Coeos-RAG is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
 MIT License) and **3d-force-graph** (© Vasco Asturiano, MIT License); those
 upstream licenses are retained and credited.

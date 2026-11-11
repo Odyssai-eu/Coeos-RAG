@@ -5,8 +5,8 @@ import zlib
 
 import pytest
 
-from odyrag import certify as C
-from odyrag.registry import Era
+from coeos_rag import certify as C
+from coeos_rag.registry import Era
 from tests.test_embedder import fake_vec
 
 
@@ -112,7 +112,7 @@ async def test_certify_dimension_mismatch_raises(tmp_path):
     samples = C.read_chunk_samples(write_vdb(tmp_path / "v.json"), 4)
     async def wrong_dim(texts):
         return [[0.1, 0.2] for _ in texts]
-    from odyrag.embedder import EmbedderError
+    from coeos_rag.embedder import EmbedderError
     with pytest.raises(EmbedderError):
         await C.certify(wrong_dim, samples)
 

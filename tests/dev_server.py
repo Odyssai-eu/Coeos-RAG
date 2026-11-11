@@ -25,9 +25,9 @@ import httpx
 import uvicorn
 from fastapi import APIRouter, Body, File, HTTPException, UploadFile
 
-from odyrag.app import create_app
-from odyrag.launchd import Launchd
-from odyrag.registry import Era, Registry, RegistryModel
+from coeos_rag.app import create_app
+from coeos_rag.launchd import Launchd
+from coeos_rag.registry import Era, Registry, RegistryModel
 from tests.fakes import FakeWorld, fake_vec, make_corpus, make_settings, write_plist
 
 
@@ -54,7 +54,7 @@ def main() -> None:
     corpus.instance.public_url = f"http://127.0.0.1:{port}/dev/lightrag"
     corpus.indexed_with.llm_eras = [
         Era(model="telerag1", start="2026-06-01", end="2026-07-15", source="shard env backups"),
-        Era(model="old-model", start="2026-07-15", end=None, source="Coeos-Rag settings"),
+        Era(model="old-model", start="2026-07-15", end=None, source="Coeos-RAG settings"),
     ]
     Registry(settings.registry_path).save(RegistryModel(corpora={
         "alpha": corpus,

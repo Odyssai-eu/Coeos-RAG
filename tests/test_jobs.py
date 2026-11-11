@@ -1,6 +1,6 @@
 import json
 
-from odyrag.jobs import JobManager
+from coeos_rag.jobs import JobManager
 
 
 def test_job_lifecycle_and_audit_log(tmp_path):

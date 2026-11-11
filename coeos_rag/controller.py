@@ -249,7 +249,7 @@ class Controller:
             c.llm = model
             if target_ep:
                 c.llm_endpoint = target_ep
-            open_era(c, model, now, "Coeos-Rag settings")
+            open_era(c, model, now, "Coeos-RAG settings")
 
         def check(c: dict) -> bool:
             if c.get("llm_model") != model:

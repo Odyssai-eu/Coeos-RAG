@@ -1,4 +1,4 @@
-// Coeos-Rag operator console: plain HTML/CSS/JS, no build, no external resource.
+// Coeos-RAG operator console: plain HTML/CSS/JS, no build, no external resource.
 // This service is reached through api() (same origin, bearer token). Each LightRAG
 // instance is reached directly from the browser through lr() (no proxy, no token).
 (() => {
@@ -152,7 +152,7 @@
     try {
       r = await fetch(path, init);
     } catch (e) {
-      throw new Error('Coeos-Rag ne répond pas.');
+      throw new Error('Coeos-RAG ne répond pas.');
     }
     const body = await r.json().catch(() => null);
     if (!r.ok) {
@@ -867,7 +867,7 @@
           <h2>Index</h2>
           <div class="mt" data-region="index-status"></div>
           <div class="row mt" data-region="index-actions"></div>
-          <p class="small muted mt">LightRAG n'enregistre pas le modèle qui a construit un index. Cet historique est tenu par Coeos-Rag.</p>
+          <p class="small muted mt">LightRAG n'enregistre pas le modèle qui a construit un index. Cet historique est tenu par Coeos-RAG.</p>
         </section>
       </div>`;
     const ready = c.engine.ready_models;
@@ -1111,7 +1111,7 @@
   function mountJournal(el) {
     state.actions = { data: null, error: null };
     el.innerHTML = `
-      <div class="page-head"><div><h1>Journal</h1><p>Les changements appliqués par Coeos-Rag.</p></div></div>
+      <div class="page-head"><div><h1>Journal</h1><p>Les changements appliqués par Coeos-RAG.</p></div></div>
       <section class="card flush"><div data-region="actions"></div></section>`;
   }
 
@@ -1188,7 +1188,7 @@
 
   function renderPageError() {
     setRegion('page-error', state.overviewError
-      ? alertBox('bad', `<strong>Coeos-Rag ne répond pas.</strong> ${esc(state.overviewError)}`)
+      ? alertBox('bad', `<strong>Coeos-RAG ne répond pas.</strong> ${esc(state.overviewError)}`)
       : '');
   }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the OdyRAG control plane to the host that runs the LightRAG instances.
+# Deploy the Coeos-RAG control plane to the host that runs the LightRAG instances.
 #
 #   ODYRAG_PORT=<port> ODYRAG_ENGINE_URL=<engine URL as seen from the host> deploy/deploy.sh <user@host>
 #
@@ -15,8 +15,8 @@ TARGET=${1:?usage: deploy.sh user@host}
 : "${ODYRAG_ENGINE_URL:?set ODYRAG_ENGINE_URL (public API of the inference engine, as seen from the host)}"
 
 HERE=$(cd "$(dirname "$0")/.." && pwd)
-VERSION=$(sed -nE 's/^__version__ = "([^"]+)".*/\1/p' "$HERE/odyrag/__init__.py")
-[ -n "$VERSION" ] || { echo "cannot read the version from odyrag/__init__.py" >&2; exit 1; }
+VERSION=$(sed -nE 's/^__version__ = "([^"]+)".*/\1/p' "$HERE/coeos_rag/__init__.py")
+[ -n "$VERSION" ] || { echo "cannot read the version from coeos_rag/__init__.py" >&2; exit 1; }
 LABEL=eu.odyssai.odyrag
 ODYRAG_BIND=${ODYRAG_BIND:-0.0.0.0}
 
@@ -44,7 +44,7 @@ home = pathlib.Path.home()
 plist = {
     'Label': os.environ['LABEL'], 'KeepAlive': True, 'RunAtLoad': True,
     'WorkingDirectory': str(home / 'odyrag' / 'app'),
-    'ProgramArguments': [str(home / 'odyrag' / 'venv' / 'bin' / 'python'), '-m', 'uvicorn', 'odyrag.app:create_app',
+    'ProgramArguments': [str(home / 'odyrag' / 'venv' / 'bin' / 'python'), '-m', 'uvicorn', 'coeos_rag.app:create_app',
                          '--factory', '--host', os.environ['ODYRAG_BIND'], '--port', os.environ['ODYRAG_PORT']],
     'StandardOutPath': str(home / 'odyrag' / 'logs' / 'odyrag.log'),
     'StandardErrorPath': str(home / 'odyrag' / 'logs' / 'odyrag.log'),
@@ -70,4 +70,4 @@ if [ "$live" != "$VERSION" ]; then
   echo "DEPLOY FAILED: expected version $VERSION, the service reports '${live:-nothing}'" >&2
   exit 1
 fi
-echo "deployed odyrag $VERSION to $TARGET (port $ODYRAG_PORT)"
+echo "deployed Coeos-RAG $VERSION to $TARGET (port $ODYRAG_PORT)"

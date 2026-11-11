@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from odyrag.registry import (
+from coeos_rag.registry import (
     Corpus, EmbedderConfig, EmbedderIdentity, Era, IndexedWith, Instance, Registry,
     RegistryModel, open_era,
 )
@@ -46,7 +46,7 @@ def test_txn_saves_on_clean_exit_and_not_on_error(tmp_path):
 def test_failed_save_keeps_old_file_and_no_tmp_left(tmp_path, monkeypatch):
     reg = Registry(tmp_path / "registry.json")
     reg.save(RegistryModel(corpora={"alpha": make_corpus("m1")}))
-    import odyrag.registry as r
+    import coeos_rag.registry as r
     monkeypatch.setattr(r.os, "replace", lambda *a, **k: (_ for _ in ()).throw(OSError("disk")))
     with pytest.raises(OSError):
         reg.save(RegistryModel(corpora={"alpha": make_corpus("m2")}))

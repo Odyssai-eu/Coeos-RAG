@@ -1,6 +1,6 @@
 """Read-only client for the inference engine's public OpenAI-compatible API.
 
-The engine is only ever a *client target*: OdyRAG lists which models are ready so a
+The engine is only ever a *client target*: Coeos-RAG lists which models are ready so a
 corpus is never pointed at a model that is not loaded. Nothing is written to it.
 """
 from __future__ import annotations

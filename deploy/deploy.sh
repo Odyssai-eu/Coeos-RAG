@@ -29,13 +29,16 @@ fi
 # 2. code, venv, state
 ssh "$TARGET" 'mkdir -p ~/odyrag/app ~/odyrag/logs ~/.odyrag'
 rsync -a --delete --exclude .venv --exclude __pycache__ --exclude .git --exclude .pytest_cache --exclude '*.md' \
+  --exclude docs --exclude graphify-out --exclude examples \
   "$HERE/" "$TARGET:odyrag/app/"
 ssh "$TARGET" 'cd ~/odyrag && { [ -x venv/bin/python ] || /opt/homebrew/bin/python3.11 -m venv venv; } \
   && venv/bin/pip install -q --disable-pip-version-check -r app/requirements.txt'
 
 # 3. admin token (created once, 0600, never printed) and registry (seeded once)
 ssh "$TARGET" 'umask 077; [ -f ~/.odyrag/admin-token ] || openssl rand -hex 24 > ~/.odyrag/admin-token'
-ssh "$TARGET" '[ -f ~/.odyrag/registry.json ] || cp ~/odyrag/app/deploy/registry.prod.json ~/.odyrag/registry.json'
+# deploy/registry.prod.json is local to the operator (not in the repository). Without it a
+# first install starts with an empty registry: see AGENTS.md.
+ssh "$TARGET" '[ -f ~/.odyrag/registry.json ] || { [ -f ~/odyrag/app/deploy/registry.prod.json ] && cp ~/odyrag/app/deploy/registry.prod.json ~/.odyrag/registry.json; } || echo "no deploy/registry.prod.json: the registry starts empty (see AGENTS.md)"'
 
 # 4. launchd plist (written with plistlib: no hand-made XML)
 ssh "$TARGET" "ODYRAG_PORT='$ODYRAG_PORT' ODYRAG_BIND='$ODYRAG_BIND' ODYRAG_ENGINE_URL='$ODYRAG_ENGINE_URL' LABEL='$LABEL' ~/odyrag/venv/bin/python - <<'PY'

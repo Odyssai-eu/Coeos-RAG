@@ -53,7 +53,7 @@ def main() -> None:
     corpus = make_corpus(plist_path, workdir, certified=False)
     corpus.instance.public_url = f"http://127.0.0.1:{port}/dev/lightrag"
     corpus.indexed_with.llm_eras = [
-        Era(model="telerag1", start="2026-06-01", end="2026-07-15", source="shard env backups"),
+        Era(model="older-model", start="2026-06-01", end="2026-07-15", source="shard env backups"),
         Era(model="old-model", start="2026-07-15", end=None, source="Coeos-RAG settings"),
     ]
     Registry(settings.registry_path).save(RegistryModel(corpora={

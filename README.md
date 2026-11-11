@@ -16,8 +16,7 @@ ceux qui interrogent les corpus.
 Cinq sections : Vue d'ensemble, Documents (injection de fichiers et de texte, file de
 traitement, liste filtrable), Requête, Modèles, Journal.
 
-Installation, mise à jour et exploitation : [AGENTS.md](AGENTS.md). Décisions et
-histoire : [ARCHITECTURE.md](ARCHITECTURE.md).
+Installation, mise à jour et exploitation : [AGENTS.md](AGENTS.md).
 
 ## Ce que ça fait — réglages « Modèles » par corpus
 
@@ -36,7 +35,7 @@ histoire : [ARCHITECTURE.md](ARCHITECTURE.md).
   une liste d'*ères* (modèle d'extraction, dates, source de l'information, nombre de
   documents ingérés pendant l'ère) et l'*identité de l'espace vectoriel* de l'index.
 - **Embedder** : vivant ou non, poids chargés, dimension, et surtout **même espace que
-  l'index** ou non. La dimension ne suffit pas : `nemo-embed` et `bge-m3` font tous deux
+  l'index** ou non. La dimension ne suffit pas : Qwen3-Embedding et bge-m3 font tous deux
   1024 dimensions, mais pas le même espace. Changer d'embedder se fait seulement vers un
   embedder qui reproduit l'espace de l'index (cosinus), sinon c'est une ré-indexation.
 - **Certifier l'index** : recalcule un échantillon de chunks stockés, répartis sur tout le
@@ -103,7 +102,7 @@ Variables d'environnement (posées dans le plist du LaunchAgent par `deploy/depl
 | `ODYRAG_EMBED_COS_THRESHOLD` | cosinus minimal sonde vs vecteur étalon | 0.98 |
 | `ODYRAG_CERT_MEDIAN_MIN` / `ODYRAG_CERT_MIN_FLOOR` | critères de certification d'un index | 0.80 / 0.50 |
 
-Valeurs mesurées derrière ces seuils : voir ARCHITECTURE.md (même embedder, un texte par
+Valeurs mesurées derrière ces seuils (même embedder, un texte par
 appel : 1.0000 ; même embedder en lots de 8 : médiane 0.91, pire 0.756 ; autre embedder de
 même dimension : autour de 0).
 
@@ -115,7 +114,8 @@ Un objet par corpus : `label`, `instance` (`url`, `launchd_label`, `plist`, `wor
 `llm_eras` = historique). `instance.url` est l'adresse vue depuis l'hôte ; le navigateur
 remplace un nom de boucle locale par le nom d'hôte de la page, sauf si `public_url` dit
 explicitement comment joindre l'instance. Écriture atomique. Le registre de production est
-semé depuis [deploy/registry.prod.json](deploy/registry.prod.json) une seule fois et n'est
+semé depuis `deploy/registry.prod.json` (fichier local à l'opérateur, hors dépôt ; modèle :
+[deploy/registry.example.json](deploy/registry.example.json)) une seule fois et n'est
 jamais écrasé par un déploiement.
 
 ## API
@@ -173,8 +173,9 @@ qui vient d'être déployée.
 certification, journal). Restent à cadrer : modèles séparés par rôle (exige LightRAG 1.5),
 suppression vérifiée de documents, graphe, veille.
 
-## Licensing
+## Licence
 
-Coeos-RAG is **proprietary** to odyssai.eu. It builds on **LightRAG** (© HKUDS,
-MIT License) and **3d-force-graph** (© Vasco Asturiano, MIT License); those
-upstream licenses are retained and credited.
+Coeos-RAG est distribué sous licence [Apache 2.0](LICENSE). Voir aussi [NOTICE](NOTICE).
+
+Il pilote des instances de [LightRAG](https://github.com/HKUDS/LightRAG) (© HKUDS, licence
+MIT), installées séparément et non redistribuées ici.

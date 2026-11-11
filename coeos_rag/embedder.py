@@ -1,7 +1,7 @@
 """Embedder probing and identity.
 
-The dimension of a vector is not the identity of the space it lives in: nemo-embed
-(Qwen3-Embedding) and bge-m3 are both 1024-d, yet swapping one for the other makes
+The dimension of a vector is not the identity of the space it lives in: Qwen3-Embedding
+and bge-m3 are both 1024-d, yet swapping one for the other makes
 vector search return noise without any error. Identity is checked by cosine: the same
 text embedded by two endpoints must give (almost) the same vector.
 """

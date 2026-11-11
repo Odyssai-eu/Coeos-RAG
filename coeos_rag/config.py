@@ -24,7 +24,7 @@ class Settings:
     http_timeout_s: float = 8.0
     # Probe vs golden vector (both embedded one text per call, so deterministic): the same
     # embedder gives 1.0000. Two different embedders of the same dimension give ~0 (measured
-    # nemo-embed vs bge-m3: -0.05 .. +0.06).
+    # Qwen3-Embedding vs bge-m3: -0.05 .. +0.06).
     embed_cos_threshold: float = 0.98
     # Certifying an index compares freshly embedded chunks with the vectors LightRAG stored.
     # Those were often produced in batches, and the same embedder gives batch vectors that

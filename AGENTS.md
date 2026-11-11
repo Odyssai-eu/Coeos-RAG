@@ -1,8 +1,8 @@
 # AGENTS.md : installer et exploiter Coeos-RAG
 
 Guide pour un agent (ou une personne) qui doit installer, mettre à jour ou étendre
-Coeos-RAG sans le contexte de ceux qui l'ont construit. Les décisions et leur histoire
-sont dans [ARCHITECTURE.md](ARCHITECTURE.md), l'usage dans [README.md](README.md).
+Coeos-RAG sans le contexte de ceux qui l'ont construit. L'usage est décrit dans
+[README.md](README.md).
 
 ## Ce que tu installes
 
@@ -110,15 +110,16 @@ Le script est idempotent. Il :
 2. copie le code dans `~/odyrag/app`, crée `~/odyrag/venv`, installe `requirements.txt` ;
 3. crée le jeton d'administration une seule fois (`~/.odyrag/admin-token`, mode 0600,
    jamais affiché) ;
-4. sème le registre une seule fois depuis `deploy/registry.prod.json` ;
+4. sème le registre une seule fois depuis `deploy/registry.prod.json`, s'il existe ;
 5. écrit le LaunchAgent, le recharge, et **échoue** si `/health` ne rapporte pas la
    version qui vient d'être déployée.
 
 `ODYRAG_BIND` (optionnel, `0.0.0.0` par défaut) fixe l'interface d'écoute.
 
-**Première installation sur un nouvel hôte** : `deploy/registry.prod.json` décrit les
-corpus d'un hôte précis. Adapte-le **avant** le premier déploiement (ou édite
-`~/.odyrag/registry.json` sur l'hôte après), un objet par corpus :
+**Première installation sur un nouvel hôte** : le registre décrit les corpus d'un hôte
+précis, il n'est donc pas dans le dépôt. Copie `deploy/registry.example.json` en
+`deploy/registry.prod.json` (ignoré par git), adapte-le **avant** le premier déploiement
+(ou édite `~/.odyrag/registry.json` sur l'hôte après), un objet par corpus :
 
 ```json
 {

@@ -1,0 +1,8 @@
+Coeos-RAG
+Copyright 2026 odyssai.eu
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Coeos-RAG operates instances of LightRAG (https://github.com/HKUDS/LightRAG),
+Copyright HKUDS, distributed under the MIT License. LightRAG is installed
+separately and is not redistributed in this repository.

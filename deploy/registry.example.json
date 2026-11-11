@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "corpora": {
+    "main": {
+      "label": "Main",
+      "instance": {
+        "url": "http://localhost:8766",
+        "launchd_label": "eu.example.lightrag-main",
+        "plist": "~/Library/LaunchAgents/eu.example.lightrag-main.plist",
+        "workdir": "~/lightrag-data/main"
+      },
+      "llm": "your-llm-model-id",
+      "embedder": {"url": "http://localhost:8765", "model": "your-embedding-model-id", "dim": 1024},
+      "indexed_with": {
+        "embedder": {"weights": null, "dim": 1024, "golden_probe": null, "golden_vec": null, "certified": null},
+        "llm_eras": []
+      }
+    }
+  }
+}

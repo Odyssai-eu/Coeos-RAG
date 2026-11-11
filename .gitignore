@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 docs/
 graphify-out/
+# the registry of a real host: instance paths and model history stay local
+deploy/registry.prod.json

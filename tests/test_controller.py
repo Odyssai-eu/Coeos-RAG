@@ -190,7 +190,7 @@ async def test_embedder_noop_when_already_applied(tmp_path):
 
 async def test_embedder_in_a_different_space_is_refused_even_with_same_dimension(tmp_path):
     ctl, world, *_ = build(tmp_path)
-    world.embedder_salt = "other"  # same 8 dims, different space: the nemo-embed vs bge-m3 case
+    world.embedder_salt = "other"  # same 8 dims, different space: two different embedders of one dimension
     _, log = collector()
     with pytest.raises(ChangeError, match="different vector space"):
         await ctl.apply_embedder("alpha", EMBEDDER, "emb2", log)

@@ -99,7 +99,7 @@ async def test_probe_alive_reads_weights_from_health():
             return httpx.Response(200, json={"data": [{"index": 0, "embedding": [0.1, 0.2, 0.3]}]})
         return httpx.Response(200, json={"embed_model": "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ"})
     async with httpx.AsyncClient(transport=transport(handler)) as c:
-        p = await E.probe(c, "http://h:8765", "nemo-embed")
+        p = await E.probe(c, "http://h:8765", "emb-model")
     assert p.alive and p.dim == 3 and p.weights.endswith("DWQ") and p.latency_ms >= 0
 
 

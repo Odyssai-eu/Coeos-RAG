@@ -43,8 +43,9 @@ Référence d'architecture et décisions : [ARCHITECTURE.md](ARCHITECTURE.md)
   l'index** ou non. La dimension ne suffit pas : `nemo-embed` et `bge-m3` font tous deux
   1024 dimensions, mais pas le même espace. Changer d'embedder se fait seulement vers un
   embedder qui reproduit l'espace de l'index (cosinus), sinon c'est une ré-indexation.
-- **Certifier l'index** : recalcule un échantillon de chunks stockés avec l'embedder de
-  l'instance et compare aux vecteurs stockés. Lecture seule, aucun redémarrage.
+- **Certifier l'index** : recalcule un échantillon de chunks stockés, répartis sur tout le
+  fichier de vecteurs, avec l'embedder de l'instance et compare aux vecteurs stockés.
+  Lecture seule, aucun redémarrage.
 - **Journal d'actions** et suivi en direct de chaque changement.
 
 ## Ce que ça ne fait pas

@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import pytest
 
+from odyrag import __version__
 from odyrag.app import create_app
 from odyrag.launchd import Launchd
 from odyrag.registry import Registry, RegistryModel
@@ -41,7 +42,7 @@ async def test_health_and_dashboard_are_served(env):
     h = (await c.get("/health")).json()
     assert h["status"] == "ok" and h["mutations_enabled"] is True
     page = await c.get("/")
-    assert page.status_code == 200 and "Coeos-Rag" in page.text and "/static/app.js?v=0.2.0" in page.text
+    assert page.status_code == 200 and "Coeos-Rag" in page.text and f"/static/app.js?v={__version__}" in page.text
     assert (await c.get("/static/app.js")).status_code == 200
 
 

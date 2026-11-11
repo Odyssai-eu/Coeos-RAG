@@ -7,6 +7,7 @@ embedder produces the space the index was built in.
 from __future__ import annotations
 
 import json
+import mmap
 import statistics
 import time
 from dataclasses import dataclass
@@ -26,39 +27,67 @@ class Sample:
     vec: list[float]
 
 
-def read_chunk_samples(vdb_path: Path, n: int, *, max_bytes: int = 24_000_000) -> list[Sample]:
-    """Read up to `n` evenly spaced chunk samples from the start of a nano-vectordb file.
+# Every item of the "data" array starts with this key. Inside a JSON string a quote is
+# always escaped, so these bytes can only be the start of an item.
+_ITEM_START = b'{"__id__"'
+# How far past a picked item to look for a usable one (non-empty text and a stored vector).
+_MAX_SKIP = 50
 
-    The file is one big JSON line (gigabytes on a large corpus), so only a prefix is read
-    and items are decoded one by one until the prefix runs out.
+
+def read_chunk_samples(vdb_path: Path, n: int) -> list[Sample]:
+    """Read up to `n` chunk samples evenly spaced over the WHOLE nano-vectordb file.
+
+    The file is one big JSON line (close to a gigabyte on a large corpus): a "data" array
+    of items followed by a "matrix" blob. It is memory-mapped, the start of every item is
+    located by a byte scan, and only the picked items are decoded. Sampling a prefix would
+    certify the oldest chunks only: on the alpha index the first 24 MB hold 7 % of them.
     """
-    with open(vdb_path, "r", encoding="utf-8") as f:
-        text = f.read(max_bytes)
-    marker = text.find('"data"')
-    start = text.find("[", marker) if marker != -1 else -1
-    if start == -1:
-        raise ValueError(f"{vdb_path}: no data array in the first {max_bytes} bytes")
-    dec = json.JSONDecoder()
-    idx = start + 1
-    items: list[Sample] = []
-    while True:
-        while idx < len(text) and text[idx] in " \n\r\t,":
-            idx += 1
-        if idx >= len(text) or text[idx] == "]":
-            break
+    with open(vdb_path, "rb") as f:
         try:
-            obj, idx = dec.raw_decode(text, idx)
-        except json.JSONDecodeError:
-            break  # prefix ended inside an item
-        content, vector = obj.get("content"), obj.get("vector")
-        if isinstance(content, str) and content.strip() and isinstance(vector, str):
-            items.append(Sample(obj.get("__id__", ""), content, decode_stored_vector(vector)))
-    if not items:
-        raise ValueError(f"{vdb_path}: no usable chunk in the first {max_bytes} bytes")
-    if len(items) <= n:
-        return items
-    step = len(items) / n
-    return [items[int(i * step)] for i in range(n)]
+            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        except ValueError as e:  # an empty file cannot be mapped
+            raise ValueError(f"{vdb_path}: empty file") from e
+        with mm:
+            marker = mm.find(b'"data"')
+            start = mm.find(b"[", marker) if marker != -1 else -1
+            if start == -1:
+                raise ValueError(f"{vdb_path}: no data array")
+            end = mm.rfind(b'"matrix"')
+            if end < start:
+                end = len(mm)  # no matrix (or a truncated file): the array runs to the end
+            positions: list[int] = []
+            idx = mm.find(_ITEM_START, start, end)
+            while idx != -1:
+                positions.append(idx)
+                idx = mm.find(_ITEM_START, idx + 1, end)
+
+            def load(k: int) -> Optional[Sample]:
+                stop = positions[k + 1] if k + 1 < len(positions) else end
+                try:
+                    obj, _ = json.JSONDecoder().raw_decode(mm[positions[k]:stop].decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    return None  # a file truncated inside this item
+                content, vector = obj.get("content"), obj.get("vector")
+                if isinstance(content, str) and content.strip() and isinstance(vector, str):
+                    return Sample(obj.get("__id__", ""), content, decode_stored_vector(vector))
+                return None
+
+            total = len(positions)
+            picks = range(total) if total <= n else [int(i * total / n) for i in range(n)]
+            samples: list[Sample] = []
+            taken: set[int] = set()
+            for k in picks:
+                for j in range(k, min(k + _MAX_SKIP, total)):
+                    if j in taken:
+                        continue
+                    sample = load(j)
+                    if sample is not None:
+                        taken.add(j)
+                        samples.append(sample)
+                        break
+    if not samples:
+        raise ValueError(f"{vdb_path}: no usable chunk")
+    return samples
 
 
 async def certify(

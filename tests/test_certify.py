@@ -36,16 +36,46 @@ def test_read_samples_even_spacing_and_all_when_few(tmp_path):
     assert len(C.read_chunk_samples(p, 50)) == 20
 
 
-def test_read_samples_survives_truncated_prefix(tmp_path):
+def test_read_samples_cover_the_whole_file_not_its_start(tmp_path):
+    p = write_vdb(tmp_path / "v.json", n=1000)
+    ids = [int(x.id.split("-")[1]) for x in C.read_chunk_samples(p, 10)]
+    assert ids == [0, 100, 200, 300, 400, 500, 600, 700, 800, 900]
+
+
+def test_read_samples_stop_at_the_matrix_and_ignore_item_like_text(tmp_path):
+    items = [{"__id__": f"chunk-{i}", "content": 'quoted {"__id__": "fake"} and "matrix" in the text',
+              "vector": stored(fake_vec(f"t{i}"))} for i in range(6)]
+    p = tmp_path / "v.json"
+    p.write_text(json.dumps({"embedding_dim": 8, "data": items, "matrix": "QUJD" * 5000}))
+    s = C.read_chunk_samples(p, 50)
+    assert [x.id for x in s] == [f"chunk-{i}" for i in range(6)]
+    assert all(x.content.startswith("quoted {") for x in s)
+
+
+def test_read_samples_skip_unusable_items(tmp_path):
+    items = [{"__id__": f"chunk-{i}", "content": "" if i % 2 == 0 else f"text {i}",
+              "vector": stored(fake_vec(f"text {i}"))} for i in range(40)]
+    p = tmp_path / "v.json"
+    p.write_text(json.dumps({"embedding_dim": 8, "data": items}))
+    s = C.read_chunk_samples(p, 4)
+    assert [x.id for x in s] == ["chunk-1", "chunk-11", "chunk-21", "chunk-31"]
+
+
+def test_read_samples_survives_a_truncated_file(tmp_path):
     p = write_vdb(tmp_path / "v.json", n=200)
-    s = C.read_chunk_samples(p, 10, max_bytes=6000)  # cuts inside an item
-    assert 0 < len(s) <= 10
+    raw = p.read_bytes()
+    p.write_bytes(raw[: len(raw) // 2])  # cut inside an item, as a non-atomic flush can do
+    s = C.read_chunk_samples(p, 10)
+    assert 0 < len(s) <= 10 and len({x.id for x in s}) == len(s)
 
 
 def test_read_samples_rejects_garbage(tmp_path):
     p = tmp_path / "v.json"
     p.write_text("not a vdb")
     with pytest.raises(ValueError):
+        C.read_chunk_samples(p, 3)
+    p.write_text("")
+    with pytest.raises(ValueError, match="empty"):
         C.read_chunk_samples(p, 3)
     p.write_text(json.dumps({"embedding_dim": 8, "data": [{"__id__": "x", "content": "", "vector": "AA=="}]}))
     with pytest.raises(ValueError):
